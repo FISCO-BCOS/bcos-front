@@ -23,7 +23,7 @@
 using namespace bcos;
 using namespace front;
 
-void FrontMessage::encode(bytes &_buffer) {
+bool FrontMessage::encode(bytes &_buffer) {
   _buffer.clear();
 
   /// moduleID          :2 bytes
@@ -35,17 +35,29 @@ void FrontMessage::encode(bytes &_buffer) {
   uint16_t moduleID = htons(m_moduleID);
   uint16_t ext = htons(m_ext);
 
+  uint8_t uuidLength = m_uuid->size();
+  // uuid length should not be greater than 256
+  if (m_payload->size() > MAX_MESSAGE_UUID_SIZE) {
+    return false;
+  }
+
   _buffer.insert(_buffer.end(), (byte *)&moduleID, (byte *)&moduleID + 2);
   _buffer.insert(_buffer.end(), (byte *)&uuidLength, (byte *)&uuidLength + 1);
-  if (m_uuidLength > 0) {
+  if (uuidLength > 0) {
     _buffer.insert(_buffer.end(), m_uuid->begin(), m_uuid->end());
   }
   _buffer.insert(_buffer.end(), (byte *)&ext, (byte *)&ext + 2);
+
+  if (m_payload->size() > MAX_MESSAGE_PAYLOAD_SIZE) {
+    return false;
+  }
+
   _buffer.insert(_buffer.end(), m_payload->begin(), m_payload->end());
+  return true;
 }
 
-ssize_t FrontMessage::decode(const bytes &_buffer, size_t _size) {
-  if (_size < HEADER_MIN_LENGTH) {
+ssize_t FrontMessage::decode(const bytes &_buffer) {
+  if (_buffer.size() < HEADER_MIN_LENGTH) {
     return MessageDecodeStatus::MESSAGE_ERROR;
   }
 
@@ -56,19 +68,18 @@ ssize_t FrontMessage::decode(const bytes &_buffer, size_t _size) {
   m_moduleID = ntohl(*((uint16_t *)&_buffer[offset]));
   offset += 2;
 
-  m_uuidLength = ntohs(*((uint8_t *)&_buffer[offset]));
+  uint8_t uuidLength = ntohs(*((uint8_t *)&_buffer[offset]));
   offset += 1;
 
-  if (m_uuidLength > 0) {
-    m_uuid =->assign(&_buffer[offset], &_buffer[offset] + m_uuidLength);
-    offset += m_uuidLength;
+  if (uuidLength > 0) {
+    m_uuid->assign(&_buffer[offset], &_buffer[offset] + uuidLength);
+    offset += uuidLength;
   }
 
   m_ext = ntohs(*((uint16_t *)&_buffer[offset]));
   offset += 2;
 
-  // TODO: length ???
-  m_payload->assign(&_buffer[offset], &_buffer[offset] + _size);
+  m_payload->assign(&_buffer[offset], &_buffer[offset] + _buffer.size());
 
   return MessageDecodeStatus::MESSAGE_COMPLETE;
 }

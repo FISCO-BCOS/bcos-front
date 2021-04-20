@@ -19,18 +19,33 @@
  */
 
 #pragma once
-#include "Message.h"
+
+#include <bcos-framework/libutilities/Common.h>
 
 namespace bcos {
 namespace front {
+
+enum MessageDecodeStatus {
+  MESSAGE_ERROR = -1,
+  MESSAGE_COMPLETE = 0,
+  MESSAGE_INCOMPLETE = 1
+};
 
 /// moduleID          :2 bytes
 /// UUID length       :1 bytes
 /// UUID              :UUID length bytes
 /// ext               :2 bytes
 /// payload
-class FrontMessage : public Message {
-  const static size_t HEADER_MIN_LENGTH = 6;
+class FrontMessage {
+public:
+  using Ptr = std::shared_ptr<FrontMessage>;
+
+  /// moduleID(2) + UUID length(1) + ext(2)
+  const static size_t HEADER_MIN_LENGTH = 5;
+  /// The maximum front message payload length  100M
+  const static size_t MAX_MESSAGE_PAYLOAD_SIZE = 100 * 1024 * 1024;
+  /// The maximum front uuid length  10M
+  const static size_t MAX_MESSAGE_UUID_SIZE = 255;
 
 public:
   FrontMessage() {
@@ -40,16 +55,12 @@ public:
 
   virtual ~FrontMessage() {}
 
-  typedef std::shared_ptr<FrontMessage> Ptr;
-
+public:
   virtual uint16_t moduleID() { return m_moduleID; }
-  virtual uint16_t setModuleID(uint16_t _moduleID) { m_moduleID = _moduleID; }
-
-  virtual uint8_t uuidLength() { return m_uuid; }
-  virtual uint8_t setUuidLength(uint8_t _uuid) { m_uuid = _uuid; }
+  virtual void setModuleID(uint16_t _moduleID) { m_moduleID = _moduleID; }
 
   virtual uint16_t ext() { return m_ext; }
-  virtual uint16_t setExt(uint16_t _ext) { m_ext = _ext; }
+  virtual void setExt(uint16_t _ext) { m_ext = _ext; }
 
   virtual std::shared_ptr<bytes> uuid() { return m_uuid; }
   virtual void setUuid(std::shared_ptr<bytes> _uuid) { m_uuid = _uuid; }
@@ -60,24 +71,23 @@ public:
   }
 
 public:
-  virtual void encode(bytes &_buffer) override;
-  virtual ssize_t decode(const bytes &_buffer, size_t _size) override;
+  virtual bool encode(bytes &_buffer);
+  virtual ssize_t decode(const bytes &_buffer);
 
 protected:
   uint16_t m_moduleID = 0;
-  uint8_t m_uuidLength = 0;
   std::shared_ptr<bytes> m_uuid;
   uint16_t m_ext = 0;
   std::shared_ptr<bytes> m_payload; ///< message data
 };
 
-class FrontMessageFactory : public MessageFactory {
+class FrontMessageFactory {
 public:
-  typedef std::shared_ptr<FrontMessageFactory> Ptr;
+  using Ptr = std::shared_ptr<FrontMessageFactory>;
 
   virtual ~FrontMessageFactory() {}
 
-  virtual Message::Ptr buildMessage() override {
+  virtual FrontMessage::Ptr buildMessage() {
     auto message = std::make_shared<FrontMessage>();
     return message;
   }

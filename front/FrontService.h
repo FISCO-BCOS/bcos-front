@@ -20,19 +20,36 @@
 
 #pragma once
 
+#include "FrontMessage.h"
 #include <bcos-framework/interfaces/front/FrontServiceInterface.h>
+#include <bcos-framework/interfaces/gateway/GatewayInterface.h>
+#include <bcos-framework/libutilities/Common.h>
+#include <bcos-framework/libutilities/ThreadPool.h>
+#include <boost/asio.hpp>
 
 namespace bcos {
 namespace front {
-class FrontService : public FrontServiceInterface {
+
+class FrontService : public FrontServiceInterface,
+                     public std::enable_shared_from_this<FrontService> {
+public:
+  using Ptr = std::shared_ptr<FrontService>;
+
+  FrontService();
+  virtual ~FrontService();
+
+  virtual void start();
+  virtual void stop();
+
 public:
   /**
    * @brief: get nodeID list
    * @return void
    */
   virtual void asyncGetNodeIDs(
-      std::function<void(Error::Ptr _error,
-                         const std::shared_ptr<const std::vector<NodeID>> &)>)
+      std::function<void(
+          Error::Ptr _error,
+          const std::shared_ptr<const std::vector<bcos::crypto::NodeIDPtr>> &)>)
       const override;
 
   /**
@@ -44,7 +61,8 @@ public:
    * @param _callback: callback
    * @return void
    */
-  virtual void asyncSendMessageByNodeID(int _moduleID, NodeID _nodeID,
+  virtual void asyncSendMessageByNodeID(int _moduleID,
+                                        bcos::crypto::NodeIDPtr _nodeID,
                                         bytesConstRef _data, uint32_t _timeout,
                                         CallbackFunc _callback) override;
 
@@ -55,9 +73,9 @@ public:
    * @param _data: message
    * @return void
    */
-  virtual void asyncSendMessageByNodeIDs(int _moduleID,
-                                         const std::vector<NodeID> &_nodeIDs,
-                                         bytesConstRef _data) override;
+  virtual void asyncSendMessageByNodeIDs(
+      int _moduleID, const std::vector<bcos::crypto::NodeIDPtr> &_nodeIDs,
+      bytesConstRef _data) override;
 
   /**
    * @brief: send broadcast message
@@ -74,21 +92,138 @@ public:
    * @param _callback: callback
    * @return void
    */
-  virtual void registerNodeStatusNotifier(
-      int _moduleID, std::function<void(Error::Ptr _error)> _callback) override;
+  virtual void
+  registerNodeStatusNotifier(int _moduleID,
+                             NodeStatusNotifier _notifier) override;
 
   /**
    * @brief: register the callback for module message
    * @param _moduleID: moduleID
-   * @param _callback: callback
+   * @param _callback: dispatcher
    * @return void
    */
-  virtual void registerMessageDispatcher(
-      int _moduleID,
-      std::function<
-          void(Error::Ptr _error, const NodeID &_nodeID, bytesConstRef _data,
-               std::function<void(bytesConstRef _respData)> _respFunc)>
-          _callback) override;
+  virtual void
+  registerMessageDispatcher(int _moduleID,
+                            MessageDispatcher _dispatcher) override;
+
+  /**
+   * @brief: receive message  from gateway
+   * @param _nodeID: the node which send this message
+   * @param _data: callback
+   * @return void
+   */
+  virtual void onReceiveMessage(bcos::crypto::NodeIDPtr _nodeID,
+                                bytesConstRef _data);
+
+  /**
+   * @brief: send response
+   * @param _moduleID: moduleID
+   * @param _nodeID: the node where the message needs to be sent to
+   * @param _uuid:
+   * @param _data: message content
+   * @return void
+   */
+  void onSendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
+                     const std::string &_uuid, bytesConstRef _data);
+
+  /**
+   * @brief: message timeout
+   * @param _uuid:
+   * @param _data: message content
+   * @return void
+   */
+  void onMessageTimeout(const boost::system::error_code &_error,
+                        const std::string &_uuid);
+
+public:
+  FrontMessageFactory::Ptr messageFactory() const { return m_messageFactory; }
+
+  void setMessageFactory(FrontMessageFactory::Ptr _messageFactory) {
+    m_messageFactory = _messageFactory;
+  }
+
+  const std::string &stringNodeID() const { return m_stringNodeID; }
+
+  bcos::crypto::NodeIDPtr nodeID() const { return m_nodeID; }
+  void setNodeID(bcos::crypto::NodeIDPtr _nodeID) {
+    m_nodeID = _nodeID;
+    m_stringNodeID =
+        std::string(m_nodeID->data().begin(), m_nodeID->data().end());
+  }
+  std::string groupID() const { return m_groupID; }
+  void setGroupID(const std::string &_groupID) { m_groupID = _groupID; }
+
+  std::shared_ptr<gateway::GatewayInterface> gatewayInterface() {
+    return m_gatewayInterface;
+  }
+
+  void setGatewayInterface(
+      std::shared_ptr<gateway::GatewayInterface> _gatewayInterface) {
+    m_gatewayInterface = _gatewayInterface;
+  }
+
+  std::shared_ptr<boost::asio::io_service> ioService() const {
+    return m_ioService;
+  }
+  void setIoService(std::shared_ptr<boost::asio::io_service> _ioService) {
+    m_ioService = _ioService;
+  }
+
+  bcos::ThreadPool::Ptr threadPool() const { return m_threadPool; }
+  void setThreadPool(bcos::ThreadPool::Ptr _threadPool) {
+    m_threadPool = _threadPool;
+  }
+
+private:
+  struct Callback : public std::enable_shared_from_this<Callback> {
+    using Ptr = std::shared_ptr<Callback>;
+    uint64_t startTime = utcSteadyTime();
+    CallbackFunc callbackFunc;
+    std::shared_ptr<boost::asio::deadline_timer> timeoutHandler;
+  };
+  // lock m_callback
+  mutable bcos::RecursiveMutex x_callback;
+  // uuid to callback
+  std::unordered_map<std::string, Callback::Ptr> m_callback;
+
+  Callback::Ptr getAndRemoveCallback(const std::string &_uuid) {
+    Callback::Ptr callback = nullptr;
+
+    RecursiveGuard l(x_callback);
+    auto it = m_callback.find(_uuid);
+    if (it != m_callback.end()) {
+      callback = it->second;
+      m_callback.erase(it);
+    }
+
+    return callback;
+  }
+
+  void addCallback(const std::string &_uuid, Callback::Ptr _callback) {
+    RecursiveGuard l(x_callback);
+    m_callback[_uuid] = _callback;
+  }
+
+private:
+  // For thread pool
+  bcos::ThreadPool::Ptr m_threadPool;
+  // For timer
+  std::shared_ptr<boost::asio::io_service> m_ioService;
+  /// gateway interface
+  std::shared_ptr<bcos::gateway::GatewayInterface> m_gatewayInterface;
+
+  FrontMessageFactory::Ptr m_messageFactory;
+  std::unordered_map<int, MessageDispatcher> m_mapMessageDispatcher;
+  std::unordered_map<int, NodeStatusNotifier> m_mapNodeStatusNotifier;
+
+  // FrontService is running
+  bool m_run = false;
+  // NodeID
+  bcos::crypto::NodeIDPtr m_nodeID;
+  // NodeID in string format
+  std::string m_stringNodeID;
+  // GroupID
+  std::string m_groupID;
 };
 } // namespace front
 } // namespace bcos
