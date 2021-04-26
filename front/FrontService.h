@@ -48,8 +48,8 @@ public:
    */
   virtual void asyncGetNodeIDs(
       std::function<void(Error::Ptr _error,
-                         const std::shared_ptr<const NodeIDs> &)>)
-      const override;
+                         const std::shared_ptr<const crypto::NodeIDs> &)>
+          _getNodeIDsFunc) const override;
 
   /**
    * @brief: send message to node
@@ -72,7 +72,8 @@ public:
    * @param _data: send data
    * @return void
    */
-  virtual void asyncSendMessageByNodeIDs(int _moduleID, const NodeIDs &_nodeIDs,
+  virtual void asyncSendMessageByNodeIDs(int _moduleID,
+                                         const crypto::NodeIDs &_nodeIDs,
                                          bytesConstRef _data) override;
 
   /**

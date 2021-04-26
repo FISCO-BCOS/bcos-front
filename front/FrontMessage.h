@@ -50,7 +50,7 @@ public:
 public:
   FrontMessage() {
     m_uuid = std::make_shared<bytes>();
-    m_payload = std::make_shared<bytes>();
+    m_payload = bytesConstRef();
   }
 
   virtual ~FrontMessage() {}
@@ -65,20 +65,18 @@ public:
   virtual std::shared_ptr<bytes> uuid() { return m_uuid; }
   virtual void setUuid(std::shared_ptr<bytes> _uuid) { m_uuid = _uuid; }
 
-  virtual std::shared_ptr<bytes> payload() { return m_payload; }
-  virtual void setPayload(std::shared_ptr<bytes> _payload) {
-    m_payload = _payload;
-  }
+  virtual bytesConstRef payload() { return m_payload; }
+  virtual void setPayload(bytesConstRef _payload) { m_payload = _payload; }
 
 public:
   virtual bool encode(bytes &_buffer);
-  virtual ssize_t decode(const bytes &_buffer);
+  virtual ssize_t decode(bytesConstRef _buffer);
 
 protected:
   uint16_t m_moduleID = 0;
   std::shared_ptr<bytes> m_uuid;
   uint16_t m_ext = 0;
-  std::shared_ptr<bytes> m_payload; ///< message data
+  bytesConstRef m_payload; ///< message data
 };
 
 class FrontMessageFactory {

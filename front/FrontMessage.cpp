@@ -37,7 +37,7 @@ bool FrontMessage::encode(bytes &_buffer) {
 
   uint8_t uuidLength = m_uuid->size();
   // uuid length should not be greater than 256
-  if (m_payload->size() > MAX_MESSAGE_UUID_SIZE) {
+  if (m_payload.size() > MAX_MESSAGE_UUID_SIZE) {
     return false;
   }
 
@@ -48,21 +48,21 @@ bool FrontMessage::encode(bytes &_buffer) {
   }
   _buffer.insert(_buffer.end(), (byte *)&ext, (byte *)&ext + 2);
 
-  if (m_payload->size() > MAX_MESSAGE_PAYLOAD_SIZE) {
+  if (m_payload.size() > MAX_MESSAGE_PAYLOAD_SIZE) {
     return false;
   }
 
-  _buffer.insert(_buffer.end(), m_payload->begin(), m_payload->end());
+  _buffer.insert(_buffer.end(), m_payload.begin(), m_payload.end());
   return true;
 }
 
-ssize_t FrontMessage::decode(const bytes &_buffer) {
+ssize_t FrontMessage::decode(bytesConstRef _buffer) {
   if (_buffer.size() < HEADER_MIN_LENGTH) {
     return MessageDecodeStatus::MESSAGE_ERROR;
   }
 
   m_uuid->clear();
-  m_payload->clear();
+  m_payload.reset();
 
   int32_t offset = 0;
   m_moduleID = ntohl(*((uint16_t *)&_buffer[offset]));
@@ -79,7 +79,7 @@ ssize_t FrontMessage::decode(const bytes &_buffer) {
   m_ext = ntohs(*((uint16_t *)&_buffer[offset]));
   offset += 2;
 
-  m_payload->assign(&_buffer[offset], &_buffer[offset] + _buffer.size());
+  m_payload = _buffer.getCroppedData(offset);
 
   return MessageDecodeStatus::MESSAGE_COMPLETE;
 }

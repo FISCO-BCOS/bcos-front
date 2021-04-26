@@ -19,6 +19,7 @@
  */
 
 #include "FrontService.h"
+#include "Common.h"
 #include "FrontMessage.h"
 #include <boost/asio.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -27,8 +28,6 @@
 
 using namespace bcos;
 using namespace front;
-
-#define FRONT_LOG(LEVEL) LOG(LEVEL) << LOG_BADGE("FRONT") << LOG_BADGE("FRONT")
 
 FrontService::FrontService() {
   FRONT_LOG(INFO) << LOG_DESC("[FrontService::FrontService] ")
@@ -82,7 +81,8 @@ void FrontService::stop() {
  */
 void FrontService::asyncGetNodeIDs(
     std::function<void(Error::Ptr _error,
-                       const std::shared_ptr<const NodeIDs> &)>) const {
+                       const std::shared_ptr<const crypto::NodeIDs> &)>
+        _getNodeIDsFunc) const {
   // TODO: fetch from gateway or the front service saves itself
 }
 
@@ -141,7 +141,7 @@ void FrontService::asyncSendMessageByNodeID(int _moduleID,
  * @return void
  */
 void FrontService::asyncSendMessageByNodeIDs(int _moduleID,
-                                             const NodeIDS &_nodeIDs,
+                                             const crypto::NodeIDs &_nodeIDs,
                                              bytesConstRef _data) {
   for (const auto &_nodeID : _nodeIDs) {
     asyncSendMessageByNodeID(_moduleID, _nodeID, _data, 0, CallbackFunc());
@@ -158,9 +158,7 @@ void FrontService::asyncMulticastMessage(int _moduleID, bytesConstRef _data) {
 
   auto message = messageFactory()->buildMessage();
   message->setModuleID(_moduleID);
-
-  auto payload = std::make_shared<bytes>(_data.begin(), _data.end());
-  message->setPayload(*payload.get());
+  message->setPayload(_data);
 
   auto buffer = std::make_shared<bytes>();
   message->encode(*buffer.get());
@@ -210,8 +208,7 @@ void FrontService::onReceiveMessage(bcos::crypto::NodeIDPtr _nodeID,
                                     bytesConstRef _data) {
 
   auto message = messageFactory()->buildMessage();
-  auto buffer = message->std::make_shared<bytes>(_data.begin(), _data.end());
-  auto result = message->decode(*buffer.get());
+  auto result = message->decode(_data);
   if (MessageDecodeStatus::MESSAGE_COMPLETE != result) {
     FRONT_LOG(ERROR)
         << LOG_DESC("[FrontService::onReceiveMessage] invalid message format")
@@ -222,7 +219,8 @@ void FrontService::onReceiveMessage(bcos::crypto::NodeIDPtr _nodeID,
 
   int moduleID = message->moduleID();
   int ext = message->ext();
-  std::shared_ptr<bytes> payload = message->payload();
+  std::shared_ptr<bytes> payload = std::make_shared<bytes>(
+      message->payload().begin(), message->payload().end());
   std::string uuid =
       std::string(message->uuid()->begin(), message->uuid()->end());
 
@@ -242,8 +240,7 @@ void FrontService::onReceiveMessage(bcos::crypto::NodeIDPtr _nodeID,
       // cancel the timer first
       callback->timeoutHandler->cancel();
       if (m_threadPool) {
-        m_threadPool->enqueue([_nodeID, payload, _respFunc] {
-          // TODO: thead safe
+        m_threadPool->enqueue([=] {
           callback->callbackFunc(
               nullptr, _nodeID, bytesConstRef(payload->data(), payload->size()),
               _respFunc);
@@ -262,8 +259,7 @@ void FrontService::onReceiveMessage(bcos::crypto::NodeIDPtr _nodeID,
   auto moduleCallback = m_mapMessageDispatcher.find(moduleID);
   if (moduleCallback != m_mapMessageDispatcher.end()) {
     if (m_threadPool) {
-      // TODO: thead safe
-      m_threadPool->enqueue([_nodeID, payload, _respFunc] {
+      m_threadPool->enqueue([=] {
         moduleCallback->second(nullptr, _nodeID,
                                bytesConstRef(payload->data(), payload->size()),
                                _respFunc);
@@ -294,10 +290,8 @@ void FrontService::onSendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
 
   auto message = messageFactory()->buildMessage();
   message->setModuleID(_moduleID);
-
-  // TODO: consider the type of payload of thread safety and how to reduce copy
   message->setUuid(std::make_shared<bytes>(_uuid.begin(), _uuid.end()));
-  message->setPayload(std::make_shared<bytes>(_data.begin(), _data.end()));
+  message->setPayload(_data);
 
   auto buffer = std::make_shared<bytes>();
   message->encode(*buffer.get());
