@@ -42,8 +42,6 @@ public:
 
   /// moduleID(2) + UUID length(1) + ext(2)
   const static size_t HEADER_MIN_LENGTH = 5;
-  /// The maximum front message payload length  100M
-  const static size_t MAX_MESSAGE_PAYLOAD_SIZE = 100 * 1024 * 1024;
   /// The maximum front uuid length  10M
   const static size_t MAX_MESSAGE_UUID_SIZE = 255;
 
