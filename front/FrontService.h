@@ -47,16 +47,15 @@ public:
    * @return void
    */
   virtual void asyncGetNodeIDs(
-      std::function<void(
-          Error::Ptr _error,
-          const std::shared_ptr<const std::vector<bcos::crypto::NodeIDPtr>> &)>)
+      std::function<void(Error::Ptr _error,
+                         const std::shared_ptr<const NodeIDs> &)>)
       const override;
 
   /**
    * @brief: send message to node
    * @param _moduleID: moduleID
    * @param _nodeID: the receiver nodeID
-   * @param _data: message
+   * @param _data: send data
    * @param _timeout: the timeout value of async function, in milliseconds.
    * @param _callback: callback
    * @return void
@@ -67,20 +66,19 @@ public:
                                         CallbackFunc _callback) override;
 
   /**
-   * @brief: send messages to multiple nodes
+   * @brief: send message to multiple nodes
    * @param _moduleID: moduleID
    * @param _nodeIDs: the receiver nodeIDs
-   * @param _data: message
+   * @param _data: send data
    * @return void
    */
-  virtual void asyncSendMessageByNodeIDs(
-      int _moduleID, const std::vector<bcos::crypto::NodeIDPtr> &_nodeIDs,
-      bytesConstRef _data) override;
+  virtual void asyncSendMessageByNodeIDs(int _moduleID, const NodeIDs &_nodeIDs,
+                                         bytesConstRef _data) override;
 
   /**
    * @brief: send broadcast message
    * @param _moduleID: moduleID
-   * @param _data:  message
+   * @param _data:  send data
    * @return void
    */
   virtual void asyncMulticastMessage(int _moduleID,
@@ -89,7 +87,7 @@ public:
   /**
    * @brief: register the node change callback
    * @param _moduleID: moduleID
-   * @param _callback: callback
+   * @param _notifier: callback
    * @return void
    */
   virtual void
@@ -99,7 +97,7 @@ public:
   /**
    * @brief: register the callback for module message
    * @param _moduleID: moduleID
-   * @param _callback: dispatcher
+   * @param _dispatcher: callback
    * @return void
    */
   virtual void
@@ -107,29 +105,29 @@ public:
                             MessageDispatcher _dispatcher) override;
 
   /**
-   * @brief: receive message  from gateway
-   * @param _nodeID: the node which send this message
-   * @param _data: callback
+   * @brief: receive message from gateway
+   * @param _nodeID: the node send this message
+   * @param _data: send data
    * @return void
    */
   virtual void onReceiveMessage(bcos::crypto::NodeIDPtr _nodeID,
                                 bytesConstRef _data);
 
   /**
-   * @brief: send response
+   * @brief: send message, call by asyncSendMessageByNodeID
    * @param _moduleID: moduleID
    * @param _nodeID: the node where the message needs to be sent to
-   * @param _uuid:
-   * @param _data: message content
+   * @param _uuid: unique ID to identify this message
+   * @param _data: send data
    * @return void
    */
   void onSendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
                      const std::string &_uuid, bytesConstRef _data);
 
   /**
-   * @brief: message timeout
-   * @param _uuid:
-   * @param _data: message content
+   * @brief: handle message timeout
+   * @param _error: boost error code
+   * @param _uuid: message uuid
    * @return void
    */
   void onMessageTimeout(const boost::system::error_code &_error,
@@ -205,9 +203,9 @@ private:
   }
 
 private:
-  // For thread pool
+  // thread pool
   bcos::ThreadPool::Ptr m_threadPool;
-  // For timer
+  // timer
   std::shared_ptr<boost::asio::io_service> m_ioService;
   /// gateway interface
   std::shared_ptr<bcos::gateway::GatewayInterface> m_gatewayInterface;
@@ -216,7 +214,7 @@ private:
   std::unordered_map<int, MessageDispatcher> m_mapMessageDispatcher;
   std::unordered_map<int, NodeStatusNotifier> m_mapNodeStatusNotifier;
 
-  // FrontService is running
+  // ervice is running or not
   bool m_run = false;
   // NodeID
   bcos::crypto::NodeIDPtr m_nodeID;

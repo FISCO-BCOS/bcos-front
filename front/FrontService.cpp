@@ -42,13 +42,15 @@ FrontService::~FrontService() {
 
 void FrontService::start() {
   if (m_run) {
-    FRONT_LOG(INFO)
-        << LOG_DESC("[FrontService::start] FrontService is aleady running")
-        << LOG_KV("nodeID", stringNodeID()) << LOG_KV("groupID", m_groupID);
+    FRONT_LOG(INFO) << LOG_DESC("[FrontService::start] FrontService is running")
+                    << LOG_KV("nodeID", stringNodeID())
+                    << LOG_KV("groupID", m_groupID);
     return;
   }
 
   // TODO: check if FrontService is initialized correctly
+  // groupID
+  // nodeID
 
   FRONT_LOG(INFO) << LOG_DESC("[FrontService::start] ")
                   << LOG_KV("nodeID", stringNodeID())
@@ -79,10 +81,8 @@ void FrontService::stop() {
  * @return void
  */
 void FrontService::asyncGetNodeIDs(
-    std::function<void(
-        Error::Ptr _error,
-        const std::shared_ptr<const std::vector<bcos::crypto::NodeIDPtr>> &)>)
-    const {
+    std::function<void(Error::Ptr _error,
+                       const std::shared_ptr<const NodeIDs> &)>) const {
   // TODO: fetch from gateway or the front service saves itself
 }
 
@@ -90,7 +90,7 @@ void FrontService::asyncGetNodeIDs(
  * @brief: send message to node
  * @param _moduleID: moduleID
  * @param _nodeID: the receiver nodeID
- * @param _data: message
+ * @param _data: send data
  * @param _timeout: the timeout value of async function, in milliseconds.
  * @param _callback: callback
  * @return void
@@ -134,15 +134,15 @@ void FrontService::asyncSendMessageByNodeID(int _moduleID,
 }
 
 /**
- * @brief: send messages to multiple nodes
+ * @brief: send message to multiple nodes
  * @param _moduleID: moduleID
  * @param _nodeIDs: the receiver nodeIDs
- * @param _data: message
+ * @param _data: send data
  * @return void
  */
-void FrontService::asyncSendMessageByNodeIDs(
-    int _moduleID, const std::vector<bcos::crypto::NodeIDPtr> &_nodeIDs,
-    bytesConstRef _data) {
+void FrontService::asyncSendMessageByNodeIDs(int _moduleID,
+                                             const NodeIDS &_nodeIDs,
+                                             bytesConstRef _data) {
   for (const auto &_nodeID : _nodeIDs) {
     asyncSendMessageByNodeID(_moduleID, _nodeID, _data, 0, CallbackFunc());
   }
@@ -151,14 +151,16 @@ void FrontService::asyncSendMessageByNodeIDs(
 /**
  * @brief: send broadcast message
  * @param _moduleID: moduleID
- * @param _data:  message
+ * @param _data:  send data
  * @return void
  */
 void FrontService::asyncMulticastMessage(int _moduleID, bytesConstRef _data) {
 
   auto message = messageFactory()->buildMessage();
   message->setModuleID(_moduleID);
-  message->setPayload(std::make_shared<bytes>(_data.toBytes()));
+
+  auto payload = std::make_shared<bytes>(_data.begin(), _data.end());
+  message->setPayload(*payload.get());
 
   auto buffer = std::make_shared<bytes>();
   message->encode(*buffer.get());
@@ -208,7 +210,8 @@ void FrontService::onReceiveMessage(bcos::crypto::NodeIDPtr _nodeID,
                                     bytesConstRef _data) {
 
   auto message = messageFactory()->buildMessage();
-  auto result = message->decode(_data.toBytes());
+  auto buffer = message->std::make_shared<bytes>(_data.begin(), _data.end());
+  auto result = message->decode(*buffer.get());
   if (MessageDecodeStatus::MESSAGE_COMPLETE != result) {
     FRONT_LOG(ERROR)
         << LOG_DESC("[FrontService::onReceiveMessage] invalid message format")
@@ -239,7 +242,7 @@ void FrontService::onReceiveMessage(bcos::crypto::NodeIDPtr _nodeID,
       // cancel the timer first
       callback->timeoutHandler->cancel();
       if (m_threadPool) {
-        m_threadPool->enqueue([=] {
+        m_threadPool->enqueue([_nodeID, payload, _respFunc] {
           // TODO: thead safe
           callback->callbackFunc(
               nullptr, _nodeID, bytesConstRef(payload->data(), payload->size()),
@@ -254,13 +257,13 @@ void FrontService::onReceiveMessage(bcos::crypto::NodeIDPtr _nodeID,
     }
   }
 
-  // messages dispatch to each module based on the callbacks registered
+  // message dispatch to each module based on the callback registered
   // by each module
   auto moduleCallback = m_mapMessageDispatcher.find(moduleID);
   if (moduleCallback != m_mapMessageDispatcher.end()) {
     if (m_threadPool) {
       // TODO: thead safe
-      m_threadPool->enqueue([=] {
+      m_threadPool->enqueue([_nodeID, payload, _respFunc] {
         moduleCallback->second(nullptr, _nodeID,
                                bytesConstRef(payload->data(), payload->size()),
                                _respFunc);
@@ -293,8 +296,8 @@ void FrontService::onSendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
   message->setModuleID(_moduleID);
 
   // TODO: consider the type of payload of thread safety and how to reduce copy
-  message->setPayload(std::make_shared<bytes>(_data.begin(), _data.end()));
   message->setUuid(std::make_shared<bytes>(_uuid.begin(), _uuid.end()));
+  message->setPayload(std::make_shared<bytes>(_data.begin(), _data.end()));
 
   auto buffer = std::make_shared<bytes>();
   message->encode(*buffer.get());
