@@ -37,9 +37,9 @@ bool FrontMessage::encode(bytes &_buffer) {
       boost::asio::detail::socket_ops::host_to_network_short(m_moduleID);
   uint16_t ext = boost::asio::detail::socket_ops::host_to_network_short(m_ext);
 
-  uint8_t uuidLength = m_uuid->size();
+  size_t uuidLength = m_uuid->size();
   // uuid length should not be greater than 256
-  if (m_uuid->size() > MAX_MESSAGE_UUID_SIZE) {
+  if (uuidLength > MAX_MESSAGE_UUID_SIZE) {
     return false;
   }
 
