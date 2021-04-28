@@ -357,7 +357,8 @@ void FrontService::onReceiveMessage(Error::Ptr _error,
                      << LOG_DESC("receive front pacaket")
                      << LOG_KV("moduleID", moduleID) << LOG_KV("uuid", uuid)
                      << LOG_KV("ext", ext) << LOG_KV("groupID", m_groupID)
-                     << LOG_KV("fromNodeID", m_nodeID->hex());
+                     << LOG_KV("fromNodeID", m_nodeID->hex())
+                     << LOG_KV("dataSize", _data.size());
 
     // response func
     auto _respFunc = std::bind(&FrontService::onSendMessage, shared_from_this(),
