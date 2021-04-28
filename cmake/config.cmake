@@ -1,0 +1,5 @@
+hunter_config(bcos-framework VERSION 3.0.0-03b469a
+URL https://codeload.github.com/FISCO-BCOS/bcos-framework/zip/c5bbaf470e16fa4700b54a94cc19d3f3800439bd
+SHA1 56894eb56e57f27e88cd277b1a6196e3966b89fd
+CMAKE_ARGS HUNTER_PACKAGE_LOG_BUILD=ON HUNTER_PACKAGE_LOG_INSTALL=ON
+)
