@@ -19,6 +19,7 @@
  */
 
 #include "FrontMessage.h"
+#include <boost/asio.hpp>
 
 using namespace bcos;
 using namespace front;
@@ -32,8 +33,9 @@ bool FrontMessage::encode(bytes &_buffer) {
   /// ext               :2 bytes
   /// payload
 
-  uint16_t moduleID = htons(m_moduleID);
-  uint16_t ext = htons(m_ext);
+  uint16_t moduleID =
+      boost::asio::detail::socket_ops::host_to_network_short(m_moduleID);
+  uint16_t ext = boost::asio::detail::socket_ops::host_to_network_short(m_ext);
 
   uint8_t uuidLength = m_uuid->size();
   // uuid length should not be greater than 256
@@ -61,7 +63,8 @@ ssize_t FrontMessage::decode(bytesConstRef _buffer) {
   m_payload.reset();
 
   int32_t offset = 0;
-  m_moduleID = ntohs(*((uint16_t *)&_buffer[offset]));
+  m_moduleID = boost::asio::detail::socket_ops::network_to_host_short(
+      *((uint16_t *)&_buffer[offset]));
   offset += 2;
 
   uint8_t uuidLength = *((uint8_t *)&_buffer[offset]);
@@ -72,7 +75,8 @@ ssize_t FrontMessage::decode(bytesConstRef _buffer) {
     offset += uuidLength;
   }
 
-  m_ext = ntohs(*((uint16_t *)&_buffer[offset]));
+  m_ext = boost::asio::detail::socket_ops::network_to_host_short(
+      *((uint16_t *)&_buffer[offset]));
   offset += 2;
 
   m_payload = _buffer.getCroppedData(offset);
