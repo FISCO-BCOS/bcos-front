@@ -111,40 +111,45 @@ void FrontService::start() {
   return;
 }
 void FrontService::stop() {
-
   if (!m_run) {
     return;
   }
 
   m_run = false;
 
-  if (m_run && m_ioService->stopped()) {
-    m_ioService->reset();
-  }
+  try {
 
-  if (m_threadPool) {
-    m_threadPool->stop();
-  }
-
-  if (m_frontServiceThread && m_frontServiceThread->joinable()) {
-    m_frontServiceThread->join();
-  }
-
-  // handle callbacks
-  auto errorPtr =
-      std::make_shared<Error>(CommonError::TIMEOUT, "front service stopped");
-
-  {
-    RecursiveGuard l(x_callback);
-
-    for (auto &callback : m_callback) {
-      FRONT_LOG(INFO) << LOG_DESC("front service stopped")
-                      << LOG_KV("message uuid", callback.first);
-      // cancel the timer first
-      callback.second->timeoutHandler->cancel();
-      callback.second->callbackFunc(errorPtr, nullptr, bytesConstRef(),
-                                    std::function<void(bytesConstRef)>());
+    if (m_run && m_ioService->stopped()) {
+      m_ioService->reset();
     }
+
+    if (m_threadPool) {
+      m_threadPool->stop();
+    }
+
+    if (m_frontServiceThread && m_frontServiceThread->joinable()) {
+      m_frontServiceThread->join();
+    }
+
+    // handle callbacks
+    auto errorPtr =
+        std::make_shared<Error>(CommonError::TIMEOUT, "front service stopped");
+
+    {
+      RecursiveGuard l(x_callback);
+
+      for (auto &callback : m_callback) {
+        FRONT_LOG(INFO) << LOG_DESC("front service stopped")
+                        << LOG_KV("message uuid", callback.first);
+        // cancel the timer first
+        callback.second->timeoutHandler->cancel();
+        callback.second->callbackFunc(errorPtr, nullptr, bytesConstRef(),
+                                      std::function<void(bytesConstRef)>());
+      }
+    }
+
+  } catch (const std::exception &e) {
+    std::cerr << e.what() << '\n';
   }
 
   FRONT_LOG(INFO) << LOG_BADGE("stop end") << LOG_KV("nodeID", m_nodeID->hex())

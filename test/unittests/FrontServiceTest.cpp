@@ -239,7 +239,7 @@ BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeIDcmak_timeout) {
 
   int moduleID = 222;
   auto dstNodeID = std::make_shared<FakeKeyInterface>(g_dstNodeID_0);
-  std::string data(1000, '#');
+  std::string data(100000, '#');
 
   BOOST_CHECK(frontService->callback().empty());
 
