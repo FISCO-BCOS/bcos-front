@@ -255,7 +255,7 @@ private:
   // GroupID
   std::string m_groupID;
   // lock m_callback
-  mutable bcos::RecursiveMutex x_nodeIDs;
+  mutable bcos::Mutex x_nodeIDs;
   // nodeIDs pushed by the gateway
   std::shared_ptr<const bcos::crypto::NodeIDs> m_nodeIDs;
 };

@@ -118,7 +118,6 @@ void FrontService::stop() {
   m_run = false;
 
   try {
-
     if (m_run && m_ioService->stopped()) {
       m_ioService->reset();
     }
@@ -137,7 +136,6 @@ void FrontService::stop() {
 
     {
       RecursiveGuard l(x_callback);
-
       for (auto &callback : m_callback) {
         FRONT_LOG(INFO) << LOG_DESC("front service stopped")
                         << LOG_KV("message uuid", callback.first);
@@ -168,7 +166,7 @@ void FrontService::asyncGetNodeIDs(
         _callback) const {
   auto errorPtr = std::make_shared<Error>(CommonError::SUCCESS, "success");
   {
-    RecursiveGuard l(x_nodeIDs);
+    Guard l(x_nodeIDs);
     _callback(errorPtr, m_nodeIDs);
   }
 }
@@ -311,7 +309,7 @@ void FrontService::onReceiveNodeIDs(
   }
 
   {
-    RecursiveGuard l(x_nodeIDs);
+    Guard l(x_nodeIDs);
     m_nodeIDs = _nodeIDs;
   }
 
@@ -342,7 +340,6 @@ void FrontService::onReceiveMessage(Error::Ptr _error,
   }
 
   try {
-
     auto message = messageFactory()->buildMessage();
     auto result = message->decode(_data);
     if (MessageDecodeStatus::MESSAGE_COMPLETE != result) {
@@ -422,7 +419,6 @@ void FrontService::onReceiveMessage(Error::Ptr _error,
                          << LOG_KV("moduleID", moduleID)
                          << LOG_KV("uuid", uuid);
     }
-
   } catch (std::exception &e) {
     FRONT_LOG(ERROR) << "onReceiveMessage exception"
                      << LOG_KV("what", boost::diagnostic_information(e));
@@ -477,7 +473,6 @@ void FrontService::onMessageTimeout(const boost::system::error_code &_error,
   }
 
   try {
-
     Callback::Ptr callback = getAndRemoveCallback(_uuid);
     if (callback) {
       auto errorPtr =
