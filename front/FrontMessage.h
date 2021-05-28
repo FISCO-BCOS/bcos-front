@@ -45,6 +45,10 @@ public:
   /// The maximum front uuid length  10M
   const static size_t MAX_MESSAGE_UUID_SIZE = 255;
 
+  enum ExtFlag {
+    Response = 0x0001,
+  };
+
 public:
   FrontMessage() {
     m_uuid = std::make_shared<bytes>();
@@ -65,6 +69,9 @@ public:
 
   virtual bytesConstRef payload() { return m_payload; }
   virtual void setPayload(bytesConstRef _payload) { m_payload = _payload; }
+
+  virtual void setResponse() { m_ext |= ExtFlag::Response; }
+  virtual bool isResponse() { return m_ext & ExtFlag::Response; }
 
 public:
   virtual bool encode(bytes &_buffer);
