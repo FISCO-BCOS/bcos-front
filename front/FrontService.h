@@ -44,28 +44,26 @@ public:
   FrontService &operator=(FrontService &&) = delete;
 
 public:
-  virtual void start();
-  virtual void stop();
+  virtual void start() override;
+  virtual void stop() override;
+
   // check the startup parameters, if the required parameters are not set
   // properly, exception will be thrown
-  virtual void checkParams();
+  void checkParams();
 
 public:
   /**
-   * @brief: get nodeID list
+   * @brief: get nodeIDs from frontservice
+   * @param _getNodeIDsFunc: response callback
    * @return void
    */
-  virtual void asyncGetNodeIDs(
-      std::function<void(Error::Ptr _error,
-                         std::shared_ptr<const crypto::NodeIDs> _nodeIDs)>
-          _callback) const override;
-
+  virtual void asyncGetNodeIDs(GetNodeIDsFunc _getNodeIDsFunc) override;
   /**
-   * @brief: send message to node
+   * @brief: send message
    * @param _moduleID: moduleID
    * @param _nodeID: the receiver nodeID
-   * @param _data: send data
-   * @param _timeout: the timeout value of async function, in milliseconds.
+   * @param _data: send message data
+   * @param _timeout: timeout, in milliseconds.
    * @param _callbackFunc: callback
    * @return void
    */
@@ -75,10 +73,19 @@ public:
                                         CallbackFunc _callbackFunc) override;
 
   /**
+   * @brief: send response
+   * @param _id: the request uuid
+   * @param _data: message
+   * @return void
+   */
+  virtual void asyncSendResponse(const std::string &_id,
+                                 bytesConstRef _data) override;
+
+  /**
    * @brief: send message to multiple nodes
    * @param _moduleID: moduleID
    * @param _nodeIDs: the receiver nodeIDs
-   * @param _data: send data
+   * @param _data: send message data
    * @return void
    */
   virtual void asyncSendMessageByNodeIDs(int _moduleID,
@@ -88,63 +95,59 @@ public:
   /**
    * @brief: send broadcast message
    * @param _moduleID: moduleID
-   * @param _data:  send data
+   * @param _data: send message data
    * @return void
    */
-  virtual void asyncMulticastMessage(int _moduleID,
-                                     bytesConstRef _data) override;
-
-  /**
-   * @brief: register the node change callback
-   * @param _moduleID: moduleID
-   * @param _notifier: callback
-   * @return void
-   */
-  virtual void
-  registerNodeStatusNotifier(int _moduleID,
-                             NodeStatusNotifier _notifier) override;
-
-  /**
-   * @brief: register the callback for module message
-   * @param _moduleID: moduleID
-   * @param _dispatcher: callback
-   * @return void
-   */
-  virtual void
-  registerMessageDispatcher(int _moduleID,
-                            MessageDispatcher _dispatcher) override;
+  virtual void asyncSendBroadcastMessage(int _moduleID,
+                                         bytesConstRef _data) override;
 
   /**
    * @brief: receive nodeIDs from gateway
-   * @param _error: error info
-   * @param _nodeIDs: received nodeIDs
+   * @param _groupID: groupID
+   * @param _nodeIDs: nodeIDs pushed by gateway
+   * @param _receiveMsgCallback: response callback
    * @return void
    */
-  virtual void
-  onReceiveNodeIDs(Error::Ptr _error,
-                   std::shared_ptr<const crypto::NodeIDs> _nodeIDs);
+  virtual void onReceiveNodeIDs(const std::string &_groupID,
+                                std::shared_ptr<const crypto::NodeIDs> _nodeIDs,
+                                ReceiveMsgFunc _receiveMsgCallback) override;
 
   /**
    * @brief: receive message from gateway
-   * @param _error: error info
-   * @param _nodeID: the node send this message
+   * @param _groupID: groupID
+   * @param _nodeID: the node send the message
    * @param _data: received message data
+   * @param _receiveMsgCallback: response callback
    * @return void
    */
-  virtual void onReceiveMessage(Error::Ptr _error,
+  virtual void onReceiveMessage(const std::string &_groupID,
                                 bcos::crypto::NodeIDPtr _nodeID,
-                                bytesConstRef _data);
+                                bytesConstRef _data,
+                                ReceiveMsgFunc _receiveMsgCallback) override;
 
   /**
-   * @brief: send message, call by asyncSendMessageByNodeID
-   * @param _moduleID: moduleID
-   * @param _nodeID: the node where the message needs to be sent to
-   * @param _uuid: unique ID to identify this message
-   * @param _data: send data
+   * @brief: receive broadcast message from gateway
+   * @param _groupID: groupID
+   * @param _nodeID: the node send the message
+   * @param _data: received message data
+   * @param _receiveMsgCallback: response callback
    * @return void
    */
-  void onSendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
-                     const std::string &_uuid, bytesConstRef _data);
+  virtual void onReceiveBroadcastMessage(
+      const std::string &_groupID, bcos::crypto::NodeIDPtr _nodeID,
+      bytesConstRef _data, ReceiveMsgFunc _receiveMsgCallback) override;
+
+  /**
+   * @brief: send message
+   * @param _moduleID: moduleID
+   * @param _nodeID: the node the message sent to
+   * @param _uuid: uuid identify this message
+   * @param _data: send data payload
+   * @return void
+   */
+  void sendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
+                   const std::string &_uuid, bytesConstRef _data,
+                   bool resp = false);
 
   /**
    * @brief: handle message timeout
@@ -156,16 +159,6 @@ public:
                         const std::string &_uuid);
 
 public:
-  const std::unordered_map<int, MessageDispatcher> &
-  mapMessageDispatcher() const {
-    return m_mapMessageDispatcher;
-  }
-
-  const std::unordered_map<int, NodeStatusNotifier> &
-  mapNodeStatusNotifier() const {
-    return m_mapNodeStatusNotifier;
-  }
-
   FrontMessageFactory::Ptr messageFactory() const { return m_messageFactory; }
 
   void setMessageFactory(FrontMessageFactory::Ptr _messageFactory) {
@@ -198,6 +191,14 @@ public:
     m_threadPool = _threadPool;
   }
 
+  // register message _dispatcher for module
+  void registerModuleMessageDispatcher(
+      int moduleID,
+      std::function<void(bcos::crypto::NodeIDPtr _nodeID, bytesConstRef _data)>
+          _dispatcher) {
+    m_moduleID2MessageDispatcher[moduleID] = _dispatcher;
+  }
+
 public:
   struct Callback : public std::enable_shared_from_this<Callback> {
     using Ptr = std::shared_ptr<Callback>;
@@ -212,6 +213,13 @@ public:
 
   const std::unordered_map<std::string, Callback::Ptr> &callback() const {
     return m_callback;
+  }
+
+  const std::unordered_map<
+      int,
+      std::function<void(bcos::crypto::NodeIDPtr _nodeID, bytesConstRef _data)>>
+  moduleID2MessageDispatcher() const {
+    return m_moduleID2MessageDispatcher;
   }
 
   Callback::Ptr getAndRemoveCallback(const std::string &_uuid) {
@@ -243,8 +251,10 @@ private:
   std::shared_ptr<bcos::gateway::GatewayInterface> m_gatewayInterface;
 
   FrontMessageFactory::Ptr m_messageFactory;
-  std::unordered_map<int, MessageDispatcher> m_mapMessageDispatcher;
-  std::unordered_map<int, NodeStatusNotifier> m_mapNodeStatusNotifier;
+
+  std::unordered_map<int, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
+                                             bytesConstRef _data)>>
+      m_moduleID2MessageDispatcher;
 
   // service is running or not
   bool m_run = false;

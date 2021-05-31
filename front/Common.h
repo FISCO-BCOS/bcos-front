@@ -19,4 +19,4 @@
  */
 #pragma once
 
-#define FRONT_LOG(LEVEL) LOG(LEVEL) << LOG_BADGE("FrontService")
+#define FRONT_LOG(LEVEL) LOG(LEVEL) << "[FrontService]"

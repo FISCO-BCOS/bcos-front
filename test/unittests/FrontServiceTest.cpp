@@ -21,9 +21,10 @@
 
 #include "front/FrontService.h"
 #include "FakeGateway.h"
-#include "FakeKeyInterface.h"
 #include "front/Common.h"
 #include "front/FrontMessage.h"
+#include "front/FrontServiceFactory.h"
+#include <bcos-crypto/signature/key/KeyFactoryImpl.h>
 #include <bcos-framework/interfaces/protocol/CommonError.h>
 #include <bcos-test/libutils/TestPromptFixture.h>
 #include <boost/test/unit_test.hpp>
@@ -38,207 +39,133 @@ const static std::string g_srcNodeID = "front.src.nodeid";
 const static std::string g_dstNodeID_0 = "front.dst.nodeid.0";
 const static std::string g_dstNodeID_1 = "front.dst.nodeid.1";
 
-std::shared_ptr<FrontService> createFrontService() {
-
-  auto gateway = std::make_shared<FakeGateway>();
-  auto factory = std::make_shared<FrontMessageFactory>();
-  auto srcNodeID = std::make_shared<FakeKeyInterface>(g_srcNodeID);
-  auto ioService = std::make_shared<boost::asio::io_service>();
-  auto threadPool = std::make_shared<ThreadPool>("frontServiceTest", 16);
-
-  auto frontService = std::make_shared<FrontService>();
-  frontService->setGroupID(g_groupID);
-  frontService->setMessageFactory(factory);
-  frontService->setGatewayInterface(gateway);
-  frontService->setIoService(ioService);
-  frontService->setNodeID(srcNodeID);
-  frontService->setThreadPool(threadPool);
-  frontService->start();
-
-  return frontService;
+bcos::crypto::NodeIDPtr createKey(const std::string &_strNodeID) {
+  auto keyFactory = std::make_shared<bcos::crypto::KeyFactoryImpl>();
+  auto nodeID = keyFactory->createKey(
+      bytesConstRef((byte *)_strNodeID.data(), _strNodeID.size()));
+  return nodeID;
 }
 
-std::shared_ptr<FrontService> createEmptyFrontService() {
-  auto frontService = std::make_shared<FrontService>();
+std::shared_ptr<FrontService> buildFrontService() {
+  auto gateway = std::make_shared<FakeGateway>();
+  auto srcNodeID = createKey(g_srcNodeID);
+
+  auto threadPool = std::make_shared<ThreadPool>("frontServiceTest", 16);
+  auto frontServiceFactory = std::make_shared<FrontServiceFactory>();
+  frontServiceFactory->setGroupID(g_groupID);
+  frontServiceFactory->setThreadPool(threadPool);
+  frontServiceFactory->setGatewayInterface(gateway);
+  frontServiceFactory->setNodeID(srcNodeID);
+  auto frontService = frontServiceFactory->buildFrontService();
+  frontService->start();
+
+  gateway->setFrontService(frontService);
+
   return frontService;
 }
 
 BOOST_FIXTURE_TEST_SUITE(FrontServiceTest, TestPromptFixture)
 
-// test
-BOOST_AUTO_TEST_CASE(testFrontService_createEmptyFrontService) {
-  auto frontService = createEmptyFrontService();
-  BOOST_CHECK_EQUAL(frontService->groupID(), "");
-  BOOST_CHECK(!frontService->nodeID());
-  BOOST_CHECK(!frontService->gatewayInterface());
-  BOOST_CHECK(!frontService->messageFactory());
-  BOOST_CHECK(!frontService->ioService());
-  BOOST_CHECK(frontService->mapMessageDispatcher().empty());
-  BOOST_CHECK(frontService->mapNodeStatusNotifier().empty());
-  BOOST_CHECK(frontService->callback().empty());
-}
-
-BOOST_AUTO_TEST_CASE(testFrontService_createFrontService) {
-  auto frontService = createFrontService();
+BOOST_AUTO_TEST_CASE(testFrontService_buildFrontService) {
+  auto frontService = buildFrontService();
   BOOST_CHECK_EQUAL(frontService->groupID(), g_groupID);
-  BOOST_CHECK_EQUAL(frontService->nodeID()->hex(), g_srcNodeID);
+  // BOOST_CHECK_EQUAL(frontService->nodeID()->hex(), g_srcNodeID);
   BOOST_CHECK(frontService->gatewayInterface());
   BOOST_CHECK(frontService->messageFactory());
   BOOST_CHECK(frontService->ioService());
-  BOOST_CHECK(frontService->mapMessageDispatcher().empty());
-  BOOST_CHECK(frontService->mapNodeStatusNotifier().empty());
   BOOST_CHECK(frontService->callback().empty());
+  BOOST_CHECK(frontService->moduleID2MessageDispatcher().empty());
 }
 
-BOOST_AUTO_TEST_CASE(testFrontService_registerMessageDispater) {
-  auto frontService = createFrontService();
-  int moduleID = 111;
-
-  auto callback = [&](Error::Ptr _error, bcos::crypto::NodeIDPtr _nodeID,
-                      bytesConstRef _data,
-                      std::function<void(bytesConstRef _respData)> _respFunc) {
-    (void)_error;
-    (void)_nodeID;
-    (void)_data;
-    (void)_respFunc;
-  };
-
-  frontService->registerMessageDispatcher(moduleID, callback);
-  frontService->registerMessageDispatcher(moduleID + 1, callback);
-  frontService->registerMessageDispatcher(moduleID + 2, callback);
-  BOOST_CHECK(frontService->mapMessageDispatcher().size() == 3);
-  BOOST_CHECK(frontService->mapMessageDispatcher().find(moduleID) !=
-              frontService->mapMessageDispatcher().end());
-  BOOST_CHECK(frontService->mapMessageDispatcher().find(moduleID + 4) ==
-              frontService->mapMessageDispatcher().end());
-}
-
-BOOST_AUTO_TEST_CASE(testFrontService_registerNodeStatusNotifier) {
-  auto frontService = createFrontService();
-  int moduleID = 113;
-
-  auto callback = [&](Error::Ptr _error) { (void)_error; };
-
-  frontService->registerNodeStatusNotifier(moduleID, callback);
-  frontService->registerNodeStatusNotifier(moduleID + 1, callback);
-  frontService->registerNodeStatusNotifier(moduleID + 2, callback);
-  BOOST_CHECK(frontService->mapNodeStatusNotifier().size() == 3);
-  BOOST_CHECK(frontService->mapNodeStatusNotifier().find(moduleID) !=
-              frontService->mapNodeStatusNotifier().end());
-  BOOST_CHECK(frontService->mapNodeStatusNotifier().find(moduleID + 4) ==
-              frontService->mapNodeStatusNotifier().end());
-}
-
-BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeID_no_callback) {
-  auto frontService = createFrontService();
+BOOST_AUTO_TEST_CASE(
+    testFrontService_asyncSendMessageByNodeID_withoutCallback) {
+  auto frontService = buildFrontService();
   auto gateway =
       std::static_pointer_cast<FakeGateway>(frontService->gatewayInterface());
 
-  int moduleID = 111;
-  auto dstNodeID = std::make_shared<FakeKeyInterface>(g_dstNodeID_0);
+  auto dstNodeID = createKey(g_dstNodeID_0);
   std::string data(1000, 'x');
+
+  std::promise<bool> p;
+  auto f = p.get_future();
+  auto moduleCallback = [&p, dstNodeID, data](bcos::crypto::NodeIDPtr _nodeID,
+                                              bytesConstRef _data) {
+    BOOST_CHECK_EQUAL(dstNodeID->hex(), _nodeID->hex());
+    BOOST_CHECK_EQUAL(std::string(_data.begin(), _data.end()), data);
+    p.set_value(true);
+  };
+
+  int moduleID = 111;
+  frontService->registerModuleMessageDispatcher(moduleID, moduleCallback);
+  BOOST_CHECK(frontService->moduleID2MessageDispatcher().find(moduleID) !=
+              frontService->moduleID2MessageDispatcher().end());
 
   frontService->asyncSendMessageByNodeID(
       moduleID, dstNodeID,
       bytesConstRef((unsigned char *)data.data(), data.size()), 0,
       CallbackFunc());
-
   BOOST_CHECK(frontService->callback().empty());
-
-  auto groupID = gateway->groupID();
-  auto nodeID = gateway->nodeID();
-  auto payload = gateway->payload();
-
-  BOOST_CHECK_EQUAL(groupID, g_groupID);
-  BOOST_CHECK_EQUAL(dstNodeID->hex(), nodeID->hex());
-
-  auto message = frontService->messageFactory()->buildMessage();
-  auto ret = message->decode(bytesConstRef(payload->data(), payload->size()));
-
-  BOOST_CHECK_EQUAL(message->payload().size(), data.size());
-  auto uuid = std::string(message->uuid()->begin(), message->uuid()->end());
-
-  BOOST_CHECK_EQUAL(ret, MessageDecodeStatus::MESSAGE_COMPLETE);
-  BOOST_CHECK(uuid.empty());
-  BOOST_CHECK_EQUAL(message->moduleID(), moduleID);
-  BOOST_CHECK_EQUAL(
-      std::string(message->payload().begin(), message->payload().end()), data);
+  f.get();
 }
 
 BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeID_callback) {
-  auto frontService = createFrontService();
+  auto frontService = buildFrontService();
   auto gateway =
       std::static_pointer_cast<FakeGateway>(frontService->gatewayInterface());
-  auto message = frontService->messageFactory()->buildMessage();
 
-  int moduleID = 222;
-  auto dstNodeID = std::make_shared<FakeKeyInterface>(g_dstNodeID_0);
-  std::string data(1000, '#');
-
-  auto okPtr =
-      std::make_shared<Error>(bcos::protocol::CommonError::SUCCESS, "success");
-
-  BOOST_CHECK(frontService->callback().empty());
+  auto dstNodeID = createKey(g_dstNodeID_0);
+  std::string data(100000, '#');
+  int moduleID = 12345;
 
   {
-    std::promise<void> barrier;
+    std::promise<bool> p;
+    auto f = p.get_future();
     auto callback =
-        [&](Error::Ptr _error, bcos::crypto::NodeIDPtr _nodeID,
-            bytesConstRef _data,
-            std::function<void(bytesConstRef _respData)> _respFunc) {
-          (void)_error;
-          (void)_nodeID;
-          (void)_data;
+        [dstNodeID, data,
+         &p](Error::Ptr _error, bcos::crypto::NodeIDPtr _nodeID,
+             bytesConstRef _data, const std::string &_uuid,
+             std::function<void(bytesConstRef _respData)> _respFunc) {
+          (void)_uuid;
           (void)_respFunc;
-          BOOST_CHECK_EQUAL(_error->errorCode(), okPtr->errorCode());
-          barrier.set_value();
+          BOOST_CHECK_EQUAL(_error->errorCode(),
+                            bcos::protocol::CommonError::SUCCESS);
+          BOOST_CHECK_EQUAL(dstNodeID->hex(), _nodeID->hex());
+          BOOST_CHECK_EQUAL(std::string(_data.begin(), _data.end()), data);
+          p.set_value(true);
         };
-
     frontService->asyncSendMessageByNodeID(
         moduleID, dstNodeID,
-        bytesConstRef((unsigned char *)data.data(), data.size()), 1000,
-        callback);
+        bytesConstRef((unsigned char *)data.data(), data.size()), 0, callback);
+    BOOST_CHECK(!frontService->callback().empty());
+    auto uuid = frontService->callback().begin()->first;
 
-    BOOST_CHECK(frontService->callback().size() == 1);
+    auto message = frontService->messageFactory()->buildMessage();
+    message->setUuid(std::make_shared<bytes>(uuid.begin(), uuid.end()));
+    message->setModuleID(moduleID);
+    message->setPayload(
+        bytesConstRef((unsigned char *)data.data(), data.size()));
+    message->setResponse();
 
-    auto groupID = gateway->groupID();
-    auto nodeID = gateway->nodeID();
-    auto payload = gateway->payload();
+    auto buffer = std::make_shared<bytes>();
+    message->encode(*buffer.get());
 
-    BOOST_CHECK_EQUAL(groupID, g_groupID);
-    BOOST_CHECK_EQUAL(dstNodeID->hex(), nodeID->hex());
-
-    auto ret = message->decode(bytesConstRef(payload->data(), payload->size()));
-    auto uuid = std::string(message->uuid()->begin(), message->uuid()->end());
-
-    BOOST_CHECK_EQUAL(ret, MessageDecodeStatus::MESSAGE_COMPLETE);
-    BOOST_CHECK_EQUAL(message->moduleID(), moduleID);
-    BOOST_CHECK_EQUAL(
-        std::string(message->payload().begin(), message->payload().end()),
-        data);
-    BOOST_CHECK(frontService->callback().find(uuid) !=
-                frontService->callback().end());
-
-    // receive message
     frontService->onReceiveMessage(
-        okPtr, nodeID, bytesConstRef(payload->data(), payload->size()));
-
-    std::future<void> barrier_future = barrier.get_future();
-    barrier_future.wait();
-
-    BOOST_CHECK(frontService->callback().find(uuid) ==
-                frontService->callback().end());
+        g_groupID, dstNodeID,
+        bytesConstRef((unsigned char *)buffer->data(), buffer->size()),
+        ReceiveMsgFunc());
+    f.get();
+    BOOST_CHECK(frontService->callback().empty());
   }
 }
 
 BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeIDcmak_timeout) {
-  auto frontService = createFrontService();
+  auto frontService = buildFrontService();
   auto gateway =
       std::static_pointer_cast<FakeGateway>(frontService->gatewayInterface());
   auto message = frontService->messageFactory()->buildMessage();
 
   int moduleID = 222;
-  auto dstNodeID = std::make_shared<FakeKeyInterface>(g_dstNodeID_0);
+  auto dstNodeID = createKey(g_dstNodeID_0);
   std::string data(100000, '#');
 
   BOOST_CHECK(frontService->callback().empty());
@@ -248,11 +175,12 @@ BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeIDcmak_timeout) {
     Error::Ptr _error;
     auto callback =
         [&](Error::Ptr _error, bcos::crypto::NodeIDPtr _nodeID,
-            bytesConstRef _data,
+            bytesConstRef _data, const std::string &_uuid,
             std::function<void(bytesConstRef _respData)> _respFunc) {
           (void)_nodeID;
           (void)_data;
           (void)_respFunc;
+          (void)_uuid;
           BOOST_CHECK_EQUAL(_error->errorCode(),
                             bcos::protocol::CommonError::TIMEOUT);
           barrier.set_value();
@@ -260,152 +188,82 @@ BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeIDcmak_timeout) {
 
     frontService->asyncSendMessageByNodeID(
         moduleID, dstNodeID,
-        bytesConstRef((unsigned char *)data.data(), data.size()), 1000,
+        bytesConstRef((unsigned char *)data.data(), data.size()), 2000,
         callback);
 
     BOOST_CHECK(frontService->callback().size() == 1);
-
-    auto groupID = gateway->groupID();
-    auto nodeID = gateway->nodeID();
-    auto payload = gateway->payload();
-
-    BOOST_CHECK_EQUAL(groupID, g_groupID);
-    BOOST_CHECK_EQUAL(dstNodeID->hex(), nodeID->hex());
-
-    auto ret = message->decode(bytesConstRef(payload->data(), payload->size()));
-    auto uuid = std::string(message->uuid()->begin(), message->uuid()->end());
-
-    BOOST_CHECK_EQUAL(ret, MessageDecodeStatus::MESSAGE_COMPLETE);
-    BOOST_CHECK_EQUAL(message->moduleID(), moduleID);
-    BOOST_CHECK_EQUAL(
-        std::string(message->payload().begin(), message->payload().end()),
-        data);
-    BOOST_CHECK(frontService->callback().find(uuid) !=
-                frontService->callback().end());
-
     std::future<void> barrier_future = barrier.get_future();
     barrier_future.wait();
-
-    BOOST_CHECK(frontService->callback().find(uuid) ==
-                frontService->callback().end());
+    BOOST_CHECK(frontService->callback().empty());
   }
 }
 
-BOOST_AUTO_TEST_CASE(testFrontService_asyncMulticastMessage) {
-  auto frontService = createFrontService();
+BOOST_AUTO_TEST_CASE(testFrontService_asyncSendBroadcastMessage) {
+  auto frontService = buildFrontService();
   auto gateway =
       std::static_pointer_cast<FakeGateway>(frontService->gatewayInterface());
 
-  int moduleID = 222;
-  auto dstNodeID = std::make_shared<FakeKeyInterface>(g_dstNodeID_0);
-  std::string data(1000, 'z');
+  auto dstNodeID = createKey(g_srcNodeID);
+  std::string data(1000, 'x');
 
-  frontService->asyncMulticastMessage(
+  std::promise<bool> p;
+  auto f = p.get_future();
+  auto moduleCallback = [&p, dstNodeID, data](bcos::crypto::NodeIDPtr _nodeID,
+                                              bytesConstRef _data) {
+    BOOST_CHECK_EQUAL(dstNodeID->hex(), _nodeID->hex());
+    BOOST_CHECK_EQUAL(std::string(_data.begin(), _data.end()), data);
+    p.set_value(true);
+  };
+
+  int moduleID = 111;
+  frontService->registerModuleMessageDispatcher(moduleID, moduleCallback);
+  BOOST_CHECK(frontService->moduleID2MessageDispatcher().find(moduleID) !=
+              frontService->moduleID2MessageDispatcher().end());
+
+  frontService->asyncSendBroadcastMessage(
       moduleID, bytesConstRef((unsigned char *)data.data(), data.size()));
-
-  auto groupID = gateway->groupID();
-  auto payload = gateway->payload();
-
-  BOOST_CHECK_EQUAL(groupID, g_groupID);
-
-  auto message = frontService->messageFactory()->buildMessage();
-  auto ret = message->decode(bytesConstRef(payload->data(), payload->size()));
-
-  BOOST_CHECK_EQUAL(message->payload().size(), data.size());
-
-  BOOST_CHECK_EQUAL(ret, MessageDecodeStatus::MESSAGE_COMPLETE);
-  BOOST_CHECK_EQUAL(message->moduleID(), moduleID);
-  BOOST_CHECK_EQUAL(
-      std::string(message->payload().begin(), message->payload().end()), data);
+  BOOST_CHECK(frontService->callback().empty());
+  f.get();
 }
 
 BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeIDs) {
-  auto frontService = createFrontService();
+  auto frontService = buildFrontService();
   auto gateway =
       std::static_pointer_cast<FakeGateway>(frontService->gatewayInterface());
 
-  int moduleID = 333;
-  auto dstNodeID = std::make_shared<FakeKeyInterface>(g_dstNodeID_0);
-  std::string data(1000, 'y');
+  auto dstNodeID = createKey(g_dstNodeID_0);
+  std::string data(1000, 'x');
+
+  std::promise<bool> p;
+  auto f = p.get_future();
+  auto moduleCallback = [&p, dstNodeID, data](bcos::crypto::NodeIDPtr _nodeID,
+                                              bytesConstRef _data) {
+    BOOST_CHECK_EQUAL(dstNodeID->hex(), _nodeID->hex());
+    BOOST_CHECK_EQUAL(std::string(_data.begin(), _data.end()), data);
+    p.set_value(true);
+  };
+
+  int moduleID = 111;
+  frontService->registerModuleMessageDispatcher(moduleID, moduleCallback);
+  BOOST_CHECK(frontService->moduleID2MessageDispatcher().find(moduleID) !=
+              frontService->moduleID2MessageDispatcher().end());
 
   frontService->asyncSendMessageByNodeIDs(
       moduleID, bcos::crypto::NodeIDs{dstNodeID},
       bytesConstRef((unsigned char *)data.data(), data.size()));
 
-  auto groupID = gateway->groupID();
-  auto payload = gateway->payload();
-
-  BOOST_CHECK_EQUAL(groupID, g_groupID);
-
-  auto message = frontService->messageFactory()->buildMessage();
-  auto ret = message->decode(bytesConstRef(payload->data(), payload->size()));
-
-  BOOST_CHECK_EQUAL(message->payload().size(), data.size());
-
-  BOOST_CHECK_EQUAL(ret, MessageDecodeStatus::MESSAGE_COMPLETE);
-  BOOST_CHECK_EQUAL(message->moduleID(), moduleID);
-  BOOST_CHECK_EQUAL(
-      std::string(message->payload().begin(), message->payload().end()), data);
+  BOOST_CHECK(frontService->callback().empty());
+  f.get();
 }
 
-BOOST_AUTO_TEST_CASE(testFrontService_registerMessageDispater_callback) {
-  auto frontService = createFrontService();
-  auto gateway =
-      std::static_pointer_cast<FakeGateway>(frontService->gatewayInterface());
-
-  auto message = frontService->messageFactory()->buildMessage();
-  auto srcNodeID = std::make_shared<FakeKeyInterface>(g_srcNodeID);
-
-  std::string data(1000, '#');
-
-  auto okPtr =
-      std::make_shared<Error>(bcos::protocol::CommonError::SUCCESS, "success");
-
-  bcos::crypto::NodeIDPtr nodeID = nullptr;
-  auto payloadPtr = std::make_shared<bytes>();
-
-  std::promise<void> barrier;
-  auto callback =
-      [&nodeID, &payloadPtr, &barrier,
-       okPtr](Error::Ptr _error, bcos::crypto::NodeIDPtr _nodeID,
-              bytesConstRef _data,
-              std::function<void(bytesConstRef _respData)> _respFunc) mutable {
-        nodeID = _nodeID;
-        payloadPtr->insert(payloadPtr->end(), _data.begin(), _data.end());
-        (void)_respFunc;
-        BOOST_CHECK_EQUAL(_error->errorCode(), okPtr->errorCode());
-        barrier.set_value();
-      };
-
-  int moduleID = 222;
-  int ext = 333;
-  frontService->registerMessageDispatcher(moduleID, callback);
-
-  message->setModuleID(moduleID);
-  message->setExt(ext);
-  message->setPayload(bytesConstRef((byte *)data.data(), data.size()));
-  auto buffer = std::make_shared<bytes>();
-  message->encode(*buffer.get());
-
-  // receive message
-  frontService->onReceiveMessage(okPtr, srcNodeID,
-                                 bytesConstRef(buffer->data(), buffer->size()));
-
-  std::future<void> barrier_future = barrier.get_future();
-  barrier_future.wait();
-
-  BOOST_CHECK(!payloadPtr->empty());
-  BOOST_CHECK_EQUAL(std::string(payloadPtr->begin(), payloadPtr->end()), data);
-}
-
-BOOST_AUTO_TEST_CASE(testFrontService_multi_timeout) {
-  auto frontService = createFrontService();
+BOOST_AUTO_TEST_CASE(testFrontService_loopTimeout) {
+  auto frontService = buildFrontService();
   auto gateway =
       std::static_pointer_cast<FakeGateway>(frontService->gatewayInterface());
   auto message = frontService->messageFactory()->buildMessage();
 
-  int moduleID = 222;
-  auto dstNodeID = std::make_shared<FakeKeyInterface>(g_dstNodeID_0);
+  int moduleID = 12345;
+  auto dstNodeID = createKey(g_dstNodeID_0);
   std::string data(1000, '#');
 
   BOOST_CHECK(frontService->callback().empty());
@@ -417,10 +275,11 @@ BOOST_AUTO_TEST_CASE(testFrontService_multi_timeout) {
     Error::Ptr _error;
     auto callback =
         [&](Error::Ptr _error, bcos::crypto::NodeIDPtr _nodeID,
-            bytesConstRef _data,
+            bytesConstRef _data, const std::string &_uuid,
             std::function<void(bytesConstRef _respData)> _respFunc) {
           (void)_nodeID;
           (void)_data;
+          (void)_uuid;
           (void)_respFunc;
           BOOST_CHECK_EQUAL(_error->errorCode(),
                             bcos::protocol::CommonError::TIMEOUT);
