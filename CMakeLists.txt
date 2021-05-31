@@ -18,7 +18,6 @@
 
 cmake_minimum_required(VERSION 3.10)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum OS X deployment version")
-
 include(FetchContent)
 if (NOT DEFINED FETCH_URL_BASE)
 	set(FETCH_URL_BASE "github.com")
@@ -37,8 +36,8 @@ list(APPEND CMAKE_MODULE_PATH ${BCOS_FRONT_CMAKE_DIR})
 #init hunter
 include(HunterGate)
 HunterGate(
-	URL "https://${FETCH_URL_BASE}/FISCO-BCOS/hunter/archive/8c81ea454c0c268b257da1fe3e3f2f69bd59a67d.tar.gz"
-    SHA1 "13292adf48c4c053ff2ceb7173631a296c08d1ac"
+    URL "https://${FETCH_URL_BASE}/FISCO-BCOS/hunter/archive/d656f5be7b835c07fb50d97623d48d3c00c69807.tar.gz"
+    SHA1 "cd9421e4aadea1b7f8e86d1b2d9a943060d24c95"
     FILEPATH "${CMAKE_SOURCE_DIR}/cmake/config.cmake"
 )
 project(bcos-front VERSION "3.0.0")
@@ -59,15 +58,9 @@ set(BCOS_FRONT_TARGET "bcos-front")
 
 add_subdirectory(front)
 
+
 if (TESTS)
-    # fetch bcos-test
-    set(BCOS_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test/bcos-test)
-    FetchContent_Declare(bcos-test
-    GIT_REPOSITORY https://${FETCH_URL_BASE}/FISCO-BCOS/bcos-test.git
-    GIT_TAG dev
-    SOURCE_DIR ${BCOS_TEST_DIR})
-    FetchContent_MakeAvailable(bcos-test)
-    
+    include(InstallBcosCryptoDependencies)
     enable_testing()
     set(CTEST_OUTPUT_ON_FAILURE TRUE)
     add_subdirectory(test)

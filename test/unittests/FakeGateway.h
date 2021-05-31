@@ -34,86 +34,59 @@ namespace test {
 class FakeGateway : public gateway::GatewayInterface,
                     public std::enable_shared_from_this<FakeGateway> {
 
-private:
-  // parameters
-  std::string m_groupID;
-  bcos::crypto::NodeIDPtr m_nodeID;
-  std::shared_ptr<bytes> m_payload;
-
 public:
-  const std::string groupID() const { return m_groupID; }
-  bcos::crypto::NodeIDPtr nodeID() const { return m_nodeID; }
-  std::shared_ptr<bytes> payload() const { return m_payload; }
-
-public:
-  FakeGateway() {}
   virtual ~FakeGateway() {}
-  /**
-   * @brief:
-   * @param _groupID : groupID
-   * @param _nodeID: nodeID
-   * @param _messageCallback: callback
-   * @return void
-   */
-  virtual void registerFrontMessageCallback(
-      const std::string &_groupID, bcos::crypto::NodeIDPtr _nodeID,
-      bcos::gateway::CallbackFunc _messageCallback) override;
 
-  /**
-   * @brief:
-   * @param _groupID : groupID
-   * @param _nodeID: nodeID
-   * @param _nodeStatusCallback: callback
-   * @return void
-   */
-  virtual void registerNodeStatusNotifier(
-      const std::string &_groupID, bcos::crypto::NodeIDPtr _nodeID,
-      std::function<void(Error::Ptr _error)> _nodeStatusCallback) override;
+public:
+  std::shared_ptr<FrontServiceInterface> m_frontService;
+  void setFrontService(std::shared_ptr<FrontServiceInterface> _frontService) {
+    m_frontService = _frontService;
+  }
 
+public:
   /**
-   * @brief: get nodeID list
-   * @return void
+   * @brief: start/stop service
    */
-  virtual void asyncGetNodeIDs(
-      std::function<
-          void(Error::Ptr _error,
-               std::shared_ptr<const std::vector<bcos::crypto::NodeIDPtr>> &)>)
-      const override;
+  virtual void start() override {}
+  virtual void stop() override {}
 
   /**
    * @brief: send message to a single node
    * @param _groupID: groupID
-   * @param _nodeID: the receiver nodeID
+   * @param _srcNodeID: the sender nodeID
+   * @param _dstNodeID: the receiver nodeID
    * @param _payload: message content
-   * @param _options: option parameters
-   * @param _callback: callback
    * @return void
    */
-  virtual void
-  asyncSendMessageByNodeID(const std::string &_groupID,
-                           bcos::crypto::NodeIDPtr _nodeID,
-                           bytesConstRef _payload, uint32_t _timeout,
-                           bcos::gateway::CallbackFunc _callback) override;
+  virtual void asyncSendMessageByNodeID(
+      const std::string &_groupID, bcos::crypto::NodeIDPtr _srcNodeID,
+      bcos::crypto::NodeIDPtr _dstNodeID, bytesConstRef _payload,
+      bcos::gateway::ErrorRespFunc _errorRespFunc) override;
 
   /**
    * @brief: send message to multiple nodes
    * @param _groupID: groupID
+   * @param _srcNodeID: the sender nodeID
    * @param _nodeIDs: the receiver nodeIDs
    * @param _payload: message content
    * @return void
    */
-  virtual void asyncSendMessageByNodeIDs(const std::string &_groupID,
-                                         const bcos::crypto::NodeIDs &_nodeIDs,
-                                         bytesConstRef _payload) override;
+  virtual void
+  asyncSendMessageByNodeIDs(const std::string &_groupID,
+                            bcos::crypto::NodeIDPtr _srcNodeID,
+                            const bcos::crypto::NodeIDs &_dstNodeIDs,
+                            bytesConstRef _payload) override;
 
   /**
    * @brief: send message to all nodes
    * @param _groupID: groupID
+   * @param _srcNodeID: the sender nodeID
    * @param _payload: message content
    * @return void
    */
-  virtual void asyncMulticastMessage(const std::string &_groupID,
-                                     bytesConstRef _payload) override;
+  virtual void asyncSendBroadcastMessage(const std::string &_groupID,
+                                         bcos::crypto::NodeIDPtr _srcNodeID,
+                                         bytesConstRef _payload) override;
 };
 
 } // namespace test
