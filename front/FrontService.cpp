@@ -125,7 +125,7 @@ void FrontService::stop() {
   m_run = false;
 
   try {
-    if (m_run && m_ioService->stopped()) {
+    if (m_ioService && m_ioService->stopped()) {
       m_ioService->reset();
     }
 
@@ -147,7 +147,9 @@ void FrontService::stop() {
         FRONT_LOG(INFO) << LOG_DESC("FrontService stopped")
                         << LOG_KV("uuid", callback.first);
         // cancel the timer
-        callback.second->timeoutHandler->cancel();
+        if (callback.second->timeoutHandler) {
+          callback.second->timeoutHandler->cancel();
+        }
         callback.second->callbackFunc(errorPtr, nullptr, bytesConstRef(),
                                       std::string(""),
                                       std::function<void(bytesConstRef)>());
