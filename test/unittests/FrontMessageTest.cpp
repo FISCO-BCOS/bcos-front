@@ -19,8 +19,8 @@
  * @date 2021-04-26
  */
 
-#include "front/FrontMessage.h"
-#include <bcos-test/libutils/TestPromptFixture.h>
+#include <bcos-framework/testutils/TestPromptFixture.h>
+#include <bcos-front/FrontMessage.h>
 #include <boost/test/unit_test.hpp>
 
 using namespace bcos;
