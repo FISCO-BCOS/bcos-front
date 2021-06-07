@@ -20,11 +20,11 @@
 
 #pragma once
 
-#include "FrontMessage.h"
 #include <bcos-framework/interfaces/front/FrontServiceInterface.h>
 #include <bcos-framework/interfaces/gateway/GatewayInterface.h>
 #include <bcos-framework/libutilities/Common.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
+#include <bcos-front/FrontMessage.h>
 #include <boost/asio.hpp>
 
 namespace bcos {
