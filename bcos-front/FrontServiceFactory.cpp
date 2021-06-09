@@ -45,11 +45,13 @@ FrontService::Ptr FrontServiceFactory::buildFrontService() {
             "FrontServiceFactory::init gateway is uninitialized"));
   }
 
+  /*
   if (!m_threadPool) {
     BOOST_THROW_EXCEPTION(
         InvalidParameter() << errinfo_comment(
             "FrontServiceFactory::init threadPool is uninitialized"));
   }
+  */
 
   FRONT_LOG(INFO) << LOG_DESC("FrontServiceFactory::init")
                   << LOG_KV("groupID", m_groupID)
