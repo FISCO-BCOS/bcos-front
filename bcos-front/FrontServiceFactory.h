@@ -32,16 +32,10 @@ public:
   using Ptr = std::shared_ptr<FrontServiceFactory>;
 
 public:
-  FrontService::Ptr buildFrontService();
+  FrontService::Ptr buildFrontService(const std::string &_groupID,
+                                      const bcos::crypto::NodeIDPtr _nodeID);
 
 public:
-  std::string groupID() const { return m_groupID; }
-  void setGroupID(const std::string &_groupID) { m_groupID = _groupID; }
-  bcos::crypto::NodeIDPtr nodeID() const { return m_nodeID; }
-  void setNodeID(const bcos::crypto::NodeIDPtr _nodeID) { m_nodeID = _nodeID; }
-  bcos::gateway::GatewayInterface::Ptr gatewayInterface() const {
-    return m_gatewayInterface;
-  }
   void
   setGatewayInterface(bcos::gateway::GatewayInterface::Ptr _gatewayInterface) {
     m_gatewayInterface = _gatewayInterface;
@@ -53,10 +47,6 @@ public:
   }
 
 private:
-  // groupID of the FrontServce
-  std::string m_groupID;
-  // nodeID of the node
-  bcos::crypto::NodeIDPtr m_nodeID;
   // gatewayInterface
   bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
   // threadpool
