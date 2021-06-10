@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE(testFrontService_asyncSendBroadcastMessage) {
   auto moduleCallback = [&p, dstNodeID, data](bcos::crypto::NodeIDPtr _nodeID,
                                               const std::string &_id,
                                               bytesConstRef _data) {
-    BOOST_CHECK(!_id.empty());
+    (void)_id;
     BOOST_CHECK_EQUAL(dstNodeID->hex(), _nodeID->hex());
     BOOST_CHECK_EQUAL(std::string(_data.begin(), _data.end()), data);
     p.set_value(true);
@@ -232,7 +232,7 @@ BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeIDs) {
   auto moduleCallback = [&p, dstNodeID, data](bcos::crypto::NodeIDPtr _nodeID,
                                               const std::string &_id,
                                               bytesConstRef _data) {
-    BOOST_CHECK(!_id.empty());
+    (void)_id;
     BOOST_CHECK_EQUAL(dstNodeID->hex(), _nodeID->hex());
     BOOST_CHECK_EQUAL(std::string(_data.begin(), _data.end()), data);
     p.set_value(true);
