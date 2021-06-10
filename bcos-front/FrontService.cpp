@@ -262,11 +262,10 @@ void FrontService::asyncSendMessageByNodeID(int _moduleID,
  * @param _data: message
  * @return void
  */
-void FrontService::asyncSendResponse(const std::string &_id,
+void FrontService::asyncSendResponse(const std::string &_id, int _moduleID,
+                                     bcos::crypto::NodeIDPtr _nodeID,
                                      bytesConstRef _data) {
-  // There is no logic, the implementation in the tars
-  (void)_id;
-  (void)_data;
+  sendMessage(_moduleID, _nodeID, _id, _data, true);
 }
 
 /**
@@ -416,11 +415,12 @@ void FrontService::onReceiveMessage(const std::string &_groupID,
           // thead safe
           std::shared_ptr<bytes> buffer = std::make_shared<bytes>(
               message->payload().begin(), message->payload().end());
-          m_threadPool->enqueue([callback, buffer, message, _nodeID] {
-            callback(_nodeID, bytesConstRef(buffer->data(), buffer->size()));
+          m_threadPool->enqueue([uuid, callback, buffer, message, _nodeID] {
+            callback(_nodeID, uuid,
+                     bytesConstRef(buffer->data(), buffer->size()));
           });
         } else {
-          it->second(_nodeID, message->payload());
+          it->second(_nodeID, uuid, message->payload());
         }
       } else {
         FRONT_LOG(WARNING)

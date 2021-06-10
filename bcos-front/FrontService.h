@@ -74,11 +74,14 @@ public:
 
   /**
    * @brief: send response
-   * @param _id: the request uuid
+   * @param _id: the request id
+   * @param _moduleID: moduleID
+   * @param _nodeID: the receiver nodeID
    * @param _data: message
    * @return void
    */
-  virtual void asyncSendResponse(const std::string &_id,
+  virtual void asyncSendResponse(const std::string &_id, int _moduleID,
+                                 bcos::crypto::NodeIDPtr _nodeID,
                                  bytesConstRef _data) override;
 
   /**
@@ -194,7 +197,8 @@ public:
   // register message _dispatcher for module
   void registerModuleMessageDispatcher(
       int moduleID,
-      std::function<void(bcos::crypto::NodeIDPtr _nodeID, bytesConstRef _data)>
+      std::function<void(bcos::crypto::NodeIDPtr _nodeID,
+                         const std::string &_id, bytesConstRef _data)>
           _dispatcher) {
     m_moduleID2MessageDispatcher[moduleID] = _dispatcher;
   }
@@ -216,8 +220,8 @@ public:
   }
 
   const std::unordered_map<
-      int,
-      std::function<void(bcos::crypto::NodeIDPtr _nodeID, bytesConstRef _data)>>
+      int, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
+                              const std::string &_id, bytesConstRef _data)>>
   moduleID2MessageDispatcher() const {
     return m_moduleID2MessageDispatcher;
   }
@@ -252,8 +256,9 @@ private:
 
   FrontMessageFactory::Ptr m_messageFactory;
 
-  std::unordered_map<int, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
-                                             bytesConstRef _data)>>
+  std::unordered_map<
+      int, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
+                              const std::string &_id, bytesConstRef _data)>>
       m_moduleID2MessageDispatcher;
 
   // service is running or not
