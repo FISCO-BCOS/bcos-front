@@ -90,7 +90,9 @@ BOOST_AUTO_TEST_CASE(
   std::promise<bool> p;
   auto f = p.get_future();
   auto moduleCallback = [&p, dstNodeID, data](bcos::crypto::NodeIDPtr _nodeID,
+                                              const std::string &_id,
                                               bytesConstRef _data) {
+    BOOST_CHECK(!_id.empty());
     BOOST_CHECK_EQUAL(dstNodeID->hex(), _nodeID->hex());
     BOOST_CHECK_EQUAL(std::string(_data.begin(), _data.end()), data);
     p.set_value(true);
@@ -139,21 +141,9 @@ BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeID_callback) {
         bytesConstRef((unsigned char *)data.data(), data.size()), 0, callback);
     BOOST_CHECK(!frontService->callback().empty());
     auto uuid = frontService->callback().begin()->first;
-
-    auto message = frontService->messageFactory()->buildMessage();
-    message->setUuid(std::make_shared<bytes>(uuid.begin(), uuid.end()));
-    message->setModuleID(moduleID);
-    message->setPayload(
+    frontService->asyncSendResponse(
+        uuid, moduleID, dstNodeID,
         bytesConstRef((unsigned char *)data.data(), data.size()));
-    message->setResponse();
-
-    auto buffer = std::make_shared<bytes>();
-    message->encode(*buffer.get());
-
-    frontService->onReceiveMessage(
-        g_groupID, dstNodeID,
-        bytesConstRef((unsigned char *)buffer->data(), buffer->size()),
-        ReceiveMsgFunc());
     f.get();
     BOOST_CHECK(frontService->callback().empty());
   }
@@ -210,7 +200,9 @@ BOOST_AUTO_TEST_CASE(testFrontService_asyncSendBroadcastMessage) {
   std::promise<bool> p;
   auto f = p.get_future();
   auto moduleCallback = [&p, dstNodeID, data](bcos::crypto::NodeIDPtr _nodeID,
+                                              const std::string &_id,
                                               bytesConstRef _data) {
+    (void)_id;
     BOOST_CHECK_EQUAL(dstNodeID->hex(), _nodeID->hex());
     BOOST_CHECK_EQUAL(std::string(_data.begin(), _data.end()), data);
     p.set_value(true);
@@ -238,7 +230,9 @@ BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeIDs) {
   std::promise<bool> p;
   auto f = p.get_future();
   auto moduleCallback = [&p, dstNodeID, data](bcos::crypto::NodeIDPtr _nodeID,
+                                              const std::string &_id,
                                               bytesConstRef _data) {
+    (void)_id;
     BOOST_CHECK_EQUAL(dstNodeID->hex(), _nodeID->hex());
     BOOST_CHECK_EQUAL(std::string(_data.begin(), _data.end()), data);
     p.set_value(true);
