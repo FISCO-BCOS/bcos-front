@@ -26,42 +26,34 @@
 using namespace bcos;
 using namespace front;
 
-FrontService::Ptr FrontServiceFactory::buildFrontService() {
-  if (m_groupID.empty()) {
-    BOOST_THROW_EXCEPTION(
-        InvalidParameter() << errinfo_comment(
-            "FrontServiceFactory::init groupID is uninitialized"));
-  }
-
-  if (!m_nodeID) {
-    BOOST_THROW_EXCEPTION(
-        InvalidParameter() << errinfo_comment(
-            "FrontServiceFactory::init nodeID is uninitialized"));
-  }
-
+FrontService::Ptr
+FrontServiceFactory::buildFrontService(const std::string &_groupID,
+                                       const bcos::crypto::NodeIDPtr _nodeID) {
   if (!m_gatewayInterface) {
     BOOST_THROW_EXCEPTION(
         InvalidParameter() << errinfo_comment(
             "FrontServiceFactory::init gateway is uninitialized"));
   }
 
+  /*
   if (!m_threadPool) {
     BOOST_THROW_EXCEPTION(
         InvalidParameter() << errinfo_comment(
             "FrontServiceFactory::init threadPool is uninitialized"));
   }
+  */
 
-  FRONT_LOG(INFO) << LOG_DESC("FrontServiceFactory::init")
-                  << LOG_KV("groupID", m_groupID)
-                  << LOG_KV("nodeID", m_nodeID->hex());
+  FRONT_LOG(INFO) << LOG_DESC("FrontServiceFactory::buildFrontService")
+                  << LOG_KV("groupID", _groupID)
+                  << LOG_KV("nodeID", _nodeID->hex());
 
   auto factory = std::make_shared<FrontMessageFactory>();
   auto ioService = std::make_shared<boost::asio::io_service>();
   auto frontService = std::make_shared<FrontService>();
 
   frontService->setMessageFactory(factory);
-  frontService->setGroupID(m_groupID);
-  frontService->setNodeID(m_nodeID);
+  frontService->setGroupID(_groupID);
+  frontService->setNodeID(_nodeID);
   frontService->setIoService(ioService);
   frontService->setGatewayInterface(m_gatewayInterface);
   frontService->setThreadPool(m_threadPool);

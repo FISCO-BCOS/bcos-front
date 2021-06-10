@@ -193,7 +193,7 @@ void FrontService::asyncGetNodeIDs(GetNodeIDsFunc _getNodeIDsFunc) {
   }
 
   FRONT_LOG(INFO) << LOG_DESC("asyncGetNodeIDs")
-                  << LOG_KV("nodeIDs.size()", nodeIDs->size());
+                  << LOG_KV("nodeIDs.size()", (nodeIDs ? nodeIDs->size() : -1));
 
   return;
 }

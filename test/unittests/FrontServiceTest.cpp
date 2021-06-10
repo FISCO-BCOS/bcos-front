@@ -54,11 +54,10 @@ std::shared_ptr<FrontService> buildFrontService() {
 
   auto threadPool = std::make_shared<ThreadPool>("frontServiceTest", 16);
   auto frontServiceFactory = std::make_shared<FrontServiceFactory>();
-  frontServiceFactory->setGroupID(g_groupID);
   frontServiceFactory->setThreadPool(threadPool);
   frontServiceFactory->setGatewayInterface(gateway);
-  frontServiceFactory->setNodeID(srcNodeID);
-  auto frontService = frontServiceFactory->buildFrontService();
+  auto frontService =
+      frontServiceFactory->buildFrontService(g_groupID, srcNodeID);
   frontService->start();
 
   gateway->setFrontService(frontService);
