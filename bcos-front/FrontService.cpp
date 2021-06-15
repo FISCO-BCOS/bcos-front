@@ -181,14 +181,12 @@ void FrontService::asyncGetNodeIDs(GetNodeIDsFunc _getNodeIDsFunc) {
     nodeIDs = m_nodeIDs;
   }
 
-  auto okPtr = std::make_shared<Error>(CommonError::SUCCESS, "success");
   if (_getNodeIDsFunc) {
     if (m_threadPool) {
-      m_threadPool->enqueue([okPtr, nodeIDs, _getNodeIDsFunc]() {
-        _getNodeIDsFunc(okPtr, nodeIDs);
-      });
+      m_threadPool->enqueue(
+          [nodeIDs, _getNodeIDsFunc]() { _getNodeIDsFunc(nullptr, nodeIDs); });
     } else {
-      _getNodeIDsFunc(okPtr, nodeIDs);
+      _getNodeIDsFunc(nullptr, nodeIDs);
     }
   }
 
@@ -323,12 +321,11 @@ void FrontService::onReceiveNodeIDs(
                   << LOG_KV("nodeIDs.size()", _nodeIDs->size());
 
   if (_receiveMsgCallback) {
-    auto okPtr = std::make_shared<Error>(CommonError::SUCCESS, "success");
     if (m_threadPool) {
       m_threadPool->enqueue(
-          [okPtr, _receiveMsgCallback]() { _receiveMsgCallback(okPtr); });
+          [_receiveMsgCallback]() { _receiveMsgCallback(nullptr); });
     } else {
-      _receiveMsgCallback(okPtr);
+      _receiveMsgCallback(nullptr);
     }
   }
 }
@@ -376,8 +373,6 @@ void FrontService::onReceiveMessage(const std::string &_groupID,
         frontService->sendMessage(moduleID, _nodeID, uuid, _data, true);
       }
     };
-
-    auto okPtr = std::make_shared<Error>(CommonError::SUCCESS, "success");
     if (message->isResponse()) {
       // callback message
       auto callback = getAndRemoveCallback(uuid);
@@ -392,14 +387,13 @@ void FrontService::onReceiveMessage(const std::string &_groupID,
           // thead safe
           std::shared_ptr<bytes> buffer = std::make_shared<bytes>(
               message->payload().begin(), message->payload().end());
-          m_threadPool->enqueue([uuid, callback, buffer, okPtr, _nodeID,
-                                 _respFunc] {
+          m_threadPool->enqueue([uuid, callback, buffer, _nodeID, _respFunc] {
             callback->callbackFunc(
-                okPtr, _nodeID, bytesConstRef(buffer->data(), buffer->size()),
+                nullptr, _nodeID, bytesConstRef(buffer->data(), buffer->size()),
                 uuid, _respFunc);
           });
         } else {
-          callback->callbackFunc(okPtr, _nodeID, message->payload(), uuid,
+          callback->callbackFunc(nullptr, _nodeID, message->payload(), uuid,
                                  _respFunc);
         }
       } else {
@@ -434,12 +428,11 @@ void FrontService::onReceiveMessage(const std::string &_groupID,
   }
 
   if (_receiveMsgCallback) {
-    auto okPtr = std::make_shared<Error>(CommonError::SUCCESS, "success");
     if (m_threadPool) {
       m_threadPool->enqueue(
-          [okPtr, _receiveMsgCallback]() { _receiveMsgCallback(okPtr); });
+          [_receiveMsgCallback]() { _receiveMsgCallback(nullptr); });
     } else {
-      _receiveMsgCallback(okPtr);
+      _receiveMsgCallback(nullptr);
     }
   }
 }
