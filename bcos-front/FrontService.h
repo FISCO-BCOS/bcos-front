@@ -159,6 +159,7 @@ public:
    * @return void
    */
   void onMessageTimeout(const boost::system::error_code &_error,
+                        bcos::crypto::NodeIDPtr _nodeID,
                         const std::string &_uuid);
 
 public:

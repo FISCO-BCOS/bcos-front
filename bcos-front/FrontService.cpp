@@ -226,13 +226,13 @@ void FrontService::asyncSendMessageByNodeID(int _moduleID,
         auto frontServiceWeakPtr =
             std::weak_ptr<FrontService>(shared_from_this());
         // callback->startTime = utcSteadyTime();
-        timeoutHandler->async_wait(
-            [frontServiceWeakPtr, uuid](const boost::system::error_code &e) {
-              auto frontService = frontServiceWeakPtr.lock();
-              if (frontService) {
-                frontService->onMessageTimeout(e, uuid);
-              }
-            });
+        timeoutHandler->async_wait([frontServiceWeakPtr, _nodeID,
+                                    uuid](const boost::system::error_code &e) {
+          auto frontService = frontServiceWeakPtr.lock();
+          if (frontService) {
+            frontService->onMessageTimeout(e, _nodeID, uuid);
+          }
+        });
       }
 
       addCallback(uuid, callback);
@@ -495,6 +495,7 @@ void FrontService::sendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
  * @return void
  */
 void FrontService::onMessageTimeout(const boost::system::error_code &_error,
+                                    bcos::crypto::NodeIDPtr _nodeID,
                                     const std::string &_uuid) {
   if (_error) {
     FRONT_LOG(ERROR) << LOG_DESC("onMessageTimeout") << LOG_KV("error", _error)
@@ -507,12 +508,12 @@ void FrontService::onMessageTimeout(const boost::system::error_code &_error,
     if (callback) {
       auto errorPtr = std::make_shared<Error>(CommonError::TIMEOUT, "timeout");
       if (m_threadPool) {
-        m_threadPool->enqueue([_uuid, callback, errorPtr]() {
-          callback->callbackFunc(errorPtr, nullptr, bytesConstRef(), _uuid,
+        m_threadPool->enqueue([_uuid, _nodeID, callback, errorPtr]() {
+          callback->callbackFunc(errorPtr, _nodeID, bytesConstRef(), _uuid,
                                  std::function<void(bytesConstRef)>());
         });
       } else {
-        callback->callbackFunc(errorPtr, nullptr, bytesConstRef(), _uuid,
+        callback->callbackFunc(errorPtr, _nodeID, bytesConstRef(), _uuid,
                                std::function<void(bytesConstRef)>());
       }
     }
