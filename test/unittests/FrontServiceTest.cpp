@@ -130,8 +130,7 @@ BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeID_callback) {
              std::function<void(bytesConstRef _respData)> _respFunc) {
           (void)_uuid;
           (void)_respFunc;
-          BOOST_CHECK_EQUAL(_error->errorCode(),
-                            bcos::protocol::CommonError::SUCCESS);
+          BOOST_CHECK(_error == nullptr);
           BOOST_CHECK_EQUAL(dstNodeID->hex(), _nodeID->hex());
           BOOST_CHECK_EQUAL(std::string(_data.begin(), _data.end()), data);
           p.set_value(true);
