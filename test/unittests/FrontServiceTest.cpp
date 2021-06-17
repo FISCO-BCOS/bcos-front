@@ -135,7 +135,8 @@ BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeID_callback)
         BOOST_CHECK(!frontService->callback().empty());
         auto uuid = frontService->callback().begin()->first;
         frontService->asyncSendResponse(uuid, moduleID, dstNodeID,
-            bytesConstRef((unsigned char*)data.data(), data.size()), nullptr);
+            bytesConstRef((unsigned char*)data.data(), data.size()),
+            [](Error::Ptr _error) { (void)_error; });
         f.get();
         BOOST_CHECK(frontService->callback().empty());
     }

@@ -141,10 +141,12 @@ public:
      * @param _nodeID: the node the message sent to
      * @param _uuid: uuid identify this message
      * @param _data: send data payload
+     * @param isResponse: if send response message
+     * @param _receiveMsgCallback: response callback
      * @return void
      */
     void sendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID, const std::string& _uuid,
-        bytesConstRef _data, bool resp = false);
+        bytesConstRef _data, bool isResponse, ReceiveMsgFunc _receiveMsgCallback);
 
     /**
      * @brief: handle message timeout
