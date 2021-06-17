@@ -191,7 +191,7 @@ void FrontService::asyncGetNodeIDs(GetNodeIDsFunc _getNodeIDsFunc) {
   }
 
   FRONT_LOG(INFO) << LOG_DESC("asyncGetNodeIDs")
-                  << LOG_KV("nodeIDs.size()", (nodeIDs ? nodeIDs->size() : -1));
+                  << LOG_KV("nodeIDs.size()", (nodeIDs ? nodeIDs->size() : 0));
 
   return;
 }
@@ -262,8 +262,12 @@ void FrontService::asyncSendMessageByNodeID(int _moduleID,
  */
 void FrontService::asyncSendResponse(const std::string &_id, int _moduleID,
                                      bcos::crypto::NodeIDPtr _nodeID,
-                                     bytesConstRef _data) {
+                                     bytesConstRef _data,
+                                     ReceiveMsgFunc _receiveMsgCallback) {
   sendMessage(_moduleID, _nodeID, _id, _data, true);
+  if (_receiveMsgCallback) {
+    _receiveMsgCallback(nullptr);
+  }
 }
 
 /**
