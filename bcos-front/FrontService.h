@@ -82,7 +82,8 @@ public:
    */
   virtual void asyncSendResponse(const std::string &_id, int _moduleID,
                                  bcos::crypto::NodeIDPtr _nodeID,
-                                 bytesConstRef _data) override;
+                                 bytesConstRef _data,
+                                 ReceiveMsgFunc _receiveMsgCallback) override;
 
   /**
    * @brief: send message to multiple nodes
