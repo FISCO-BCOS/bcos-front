@@ -35,18 +35,14 @@ using namespace bcos::gateway;
  * @param _callback: callback
  * @return void
  */
-void FakeGateway::asyncSendMessageByNodeID(
-    const std::string &_groupID, bcos::crypto::NodeIDPtr _srcNodeID,
-    bcos::crypto::NodeIDPtr _dstNodeID, bytesConstRef _payload,
-    bcos::gateway::ErrorRespFunc _errorRespFunc) {
+void FakeGateway::asyncSendMessageByNodeID(const std::string& _groupID,
+    bcos::crypto::NodeIDPtr _srcNodeID, bcos::crypto::NodeIDPtr _dstNodeID, bytesConstRef _payload,
+    bcos::gateway::ErrorRespFunc _errorRespFunc)
+{
+    m_frontService->onReceiveMessage(_groupID, _dstNodeID, _payload, _errorRespFunc);
 
-  m_frontService->onReceiveMessage(_groupID, _dstNodeID, _payload,
-                                   _errorRespFunc);
-
-  FRONT_LOG(DEBUG) << "[FakeGateway] asyncSendMessageByNodeID"
-                   << LOG_KV("groupID", _groupID)
-                   << LOG_KV("nodeID", _srcNodeID->hex())
-                   << LOG_KV("nodeID", _dstNodeID->hex());
+    FRONT_LOG(DEBUG) << "[FakeGateway] asyncSendMessageByNodeID" << LOG_KV("groupID", _groupID)
+                     << LOG_KV("nodeID", _srcNodeID->hex()) << LOG_KV("nodeID", _dstNodeID->hex());
 }
 
 /**
@@ -56,17 +52,17 @@ void FakeGateway::asyncSendMessageByNodeID(
  * @param _payload: message content
  * @return void
  */
-void FakeGateway::asyncSendMessageByNodeIDs(
-    const std::string &_groupID, bcos::crypto::NodeIDPtr _srcNodeID,
-    const bcos::crypto::NodeIDs &_dstNodeIDs, bytesConstRef _payload) {
+void FakeGateway::asyncSendMessageByNodeIDs(const std::string& _groupID,
+    bcos::crypto::NodeIDPtr _srcNodeID, const bcos::crypto::NodeIDs& _dstNodeIDs,
+    bytesConstRef _payload)
+{
+    if (!_dstNodeIDs.empty())
+    {
+        m_frontService->onReceiveMessage(
+            _groupID, _srcNodeID, _payload, bcos::gateway::ErrorRespFunc());
+    }
 
-  if (!_dstNodeIDs.empty()) {
-    m_frontService->onReceiveMessage(_groupID, _srcNodeID, _payload,
-                                     bcos::gateway::ErrorRespFunc());
-  }
-
-  FRONT_LOG(DEBUG) << "[FakeGateway] asyncSendMessageByNodeIDs"
-                   << LOG_KV("groupID", _groupID);
+    FRONT_LOG(DEBUG) << "[FakeGateway] asyncSendMessageByNodeIDs" << LOG_KV("groupID", _groupID);
 }
 
 /**
@@ -75,11 +71,9 @@ void FakeGateway::asyncSendMessageByNodeIDs(
  * @param _payload: message content
  * @return void
  */
-void FakeGateway::asyncSendBroadcastMessage(const std::string &_groupID,
-                                            bcos::crypto::NodeIDPtr _srcNodeID,
-                                            bytesConstRef _payload) {
-  m_frontService->onReceiveBroadcastMessage(_groupID, _srcNodeID, _payload,
-                                            ErrorRespFunc());
-  FRONT_LOG(DEBUG) << "asyncSendBroadcastMessage"
-                   << LOG_KV("groupID", _groupID);
+void FakeGateway::asyncSendBroadcastMessage(
+    const std::string& _groupID, bcos::crypto::NodeIDPtr _srcNodeID, bytesConstRef _payload)
+{
+    m_frontService->onReceiveBroadcastMessage(_groupID, _srcNodeID, _payload, ErrorRespFunc());
+    FRONT_LOG(DEBUG) << "asyncSendBroadcastMessage" << LOG_KV("groupID", _groupID);
 }

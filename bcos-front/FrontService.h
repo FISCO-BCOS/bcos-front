@@ -27,254 +27,243 @@
 #include <bcos-front/FrontMessage.h>
 #include <boost/asio.hpp>
 
-namespace bcos {
-namespace front {
-
-class FrontService : public FrontServiceInterface,
-                     public std::enable_shared_from_this<FrontService> {
+namespace bcos
+{
+namespace front
+{
+class FrontService : public FrontServiceInterface, public std::enable_shared_from_this<FrontService>
+{
 public:
-  using Ptr = std::shared_ptr<FrontService>;
+    using Ptr = std::shared_ptr<FrontService>;
 
-  FrontService();
-  FrontService(const FrontService &) = delete;
-  FrontService(FrontService &&) = delete;
-  virtual ~FrontService();
+    FrontService();
+    FrontService(const FrontService&) = delete;
+    FrontService(FrontService&&) = delete;
+    virtual ~FrontService();
 
-  FrontService &operator=(const FrontService &) = delete;
-  FrontService &operator=(FrontService &&) = delete;
-
-public:
-  virtual void start() override;
-  virtual void stop() override;
-
-  // check the startup parameters, if the required parameters are not set
-  // properly, exception will be thrown
-  void checkParams();
+    FrontService& operator=(const FrontService&) = delete;
+    FrontService& operator=(FrontService&&) = delete;
 
 public:
-  /**
-   * @brief: get nodeIDs from frontservice
-   * @param _getNodeIDsFunc: response callback
-   * @return void
-   */
-  virtual void asyncGetNodeIDs(GetNodeIDsFunc _getNodeIDsFunc) override;
-  /**
-   * @brief: send message
-   * @param _moduleID: moduleID
-   * @param _nodeID: the receiver nodeID
-   * @param _data: send message data
-   * @param _timeout: timeout, in milliseconds.
-   * @param _callbackFunc: callback
-   * @return void
-   */
-  virtual void asyncSendMessageByNodeID(int _moduleID,
-                                        bcos::crypto::NodeIDPtr _nodeID,
-                                        bytesConstRef _data, uint32_t _timeout,
-                                        CallbackFunc _callbackFunc) override;
+    virtual void start() override;
+    virtual void stop() override;
 
-  /**
-   * @brief: send response
-   * @param _id: the request id
-   * @param _moduleID: moduleID
-   * @param _nodeID: the receiver nodeID
-   * @param _data: message
-   * @return void
-   */
-  virtual void asyncSendResponse(const std::string &_id, int _moduleID,
-                                 bcos::crypto::NodeIDPtr _nodeID,
-                                 bytesConstRef _data,
-                                 ReceiveMsgFunc _receiveMsgCallback) override;
-
-  /**
-   * @brief: send message to multiple nodes
-   * @param _moduleID: moduleID
-   * @param _nodeIDs: the receiver nodeIDs
-   * @param _data: send message data
-   * @return void
-   */
-  virtual void asyncSendMessageByNodeIDs(int _moduleID,
-                                         const crypto::NodeIDs &_nodeIDs,
-                                         bytesConstRef _data) override;
-
-  /**
-   * @brief: send broadcast message
-   * @param _moduleID: moduleID
-   * @param _data: send message data
-   * @return void
-   */
-  virtual void asyncSendBroadcastMessage(int _moduleID,
-                                         bytesConstRef _data) override;
-
-  /**
-   * @brief: receive nodeIDs from gateway
-   * @param _groupID: groupID
-   * @param _nodeIDs: nodeIDs pushed by gateway
-   * @param _receiveMsgCallback: response callback
-   * @return void
-   */
-  virtual void onReceiveNodeIDs(const std::string &_groupID,
-                                std::shared_ptr<const crypto::NodeIDs> _nodeIDs,
-                                ReceiveMsgFunc _receiveMsgCallback) override;
-
-  /**
-   * @brief: receive message from gateway
-   * @param _groupID: groupID
-   * @param _nodeID: the node send the message
-   * @param _data: received message data
-   * @param _receiveMsgCallback: response callback
-   * @return void
-   */
-  virtual void onReceiveMessage(const std::string &_groupID,
-                                bcos::crypto::NodeIDPtr _nodeID,
-                                bytesConstRef _data,
-                                ReceiveMsgFunc _receiveMsgCallback) override;
-
-  /**
-   * @brief: receive broadcast message from gateway
-   * @param _groupID: groupID
-   * @param _nodeID: the node send the message
-   * @param _data: received message data
-   * @param _receiveMsgCallback: response callback
-   * @return void
-   */
-  virtual void onReceiveBroadcastMessage(
-      const std::string &_groupID, bcos::crypto::NodeIDPtr _nodeID,
-      bytesConstRef _data, ReceiveMsgFunc _receiveMsgCallback) override;
-
-  /**
-   * @brief: send message
-   * @param _moduleID: moduleID
-   * @param _nodeID: the node the message sent to
-   * @param _uuid: uuid identify this message
-   * @param _data: send data payload
-   * @return void
-   */
-  void sendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
-                   const std::string &_uuid, bytesConstRef _data,
-                   bool resp = false);
-
-  /**
-   * @brief: handle message timeout
-   * @param _error: boost error code
-   * @param _uuid: message uuid
-   * @return void
-   */
-  void onMessageTimeout(const boost::system::error_code &_error,
-                        bcos::crypto::NodeIDPtr _nodeID,
-                        const std::string &_uuid);
+    // check the startup parameters, if the required parameters are not set
+    // properly, exception will be thrown
+    void checkParams();
 
 public:
-  FrontMessageFactory::Ptr messageFactory() const { return m_messageFactory; }
+    /**
+     * @brief: get nodeIDs from frontservice
+     * @param _getNodeIDsFunc: response callback
+     * @return void
+     */
+    virtual void asyncGetNodeIDs(GetNodeIDsFunc _getNodeIDsFunc) override;
+    /**
+     * @brief: send message
+     * @param _moduleID: moduleID
+     * @param _nodeID: the receiver nodeID
+     * @param _data: send message data
+     * @param _timeout: timeout, in milliseconds.
+     * @param _callbackFunc: callback
+     * @return void
+     */
+    virtual void asyncSendMessageByNodeID(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
+        bytesConstRef _data, uint32_t _timeout, CallbackFunc _callbackFunc) override;
 
-  void setMessageFactory(FrontMessageFactory::Ptr _messageFactory) {
-    m_messageFactory = _messageFactory;
-  }
+    /**
+     * @brief: send response
+     * @param _id: the request id
+     * @param _moduleID: moduleID
+     * @param _nodeID: the receiver nodeID
+     * @param _data: message
+     * @return void
+     */
+    virtual void asyncSendResponse(const std::string& _id, int _moduleID,
+        bcos::crypto::NodeIDPtr _nodeID, bytesConstRef _data,
+        ReceiveMsgFunc _receiveMsgCallback) override;
 
-  bcos::crypto::NodeIDPtr nodeID() const { return m_nodeID; }
-  void setNodeID(bcos::crypto::NodeIDPtr _nodeID) { m_nodeID = _nodeID; }
-  std::string groupID() const { return m_groupID; }
-  void setGroupID(const std::string &_groupID) { m_groupID = _groupID; }
+    /**
+     * @brief: send message to multiple nodes
+     * @param _moduleID: moduleID
+     * @param _nodeIDs: the receiver nodeIDs
+     * @param _data: send message data
+     * @return void
+     */
+    virtual void asyncSendMessageByNodeIDs(
+        int _moduleID, const crypto::NodeIDs& _nodeIDs, bytesConstRef _data) override;
 
-  std::shared_ptr<gateway::GatewayInterface> gatewayInterface() {
-    return m_gatewayInterface;
-  }
+    /**
+     * @brief: send broadcast message
+     * @param _moduleID: moduleID
+     * @param _data: send message data
+     * @return void
+     */
+    virtual void asyncSendBroadcastMessage(int _moduleID, bytesConstRef _data) override;
 
-  void setGatewayInterface(
-      std::shared_ptr<gateway::GatewayInterface> _gatewayInterface) {
-    m_gatewayInterface = _gatewayInterface;
-  }
+    /**
+     * @brief: receive nodeIDs from gateway
+     * @param _groupID: groupID
+     * @param _nodeIDs: nodeIDs pushed by gateway
+     * @param _receiveMsgCallback: response callback
+     * @return void
+     */
+    virtual void onReceiveNodeIDs(const std::string& _groupID,
+        std::shared_ptr<const crypto::NodeIDs> _nodeIDs,
+        ReceiveMsgFunc _receiveMsgCallback) override;
 
-  std::shared_ptr<boost::asio::io_service> ioService() const {
-    return m_ioService;
-  }
-  void setIoService(std::shared_ptr<boost::asio::io_service> _ioService) {
-    m_ioService = _ioService;
-  }
+    /**
+     * @brief: receive message from gateway
+     * @param _groupID: groupID
+     * @param _nodeID: the node send the message
+     * @param _data: received message data
+     * @param _receiveMsgCallback: response callback
+     * @return void
+     */
+    virtual void onReceiveMessage(const std::string& _groupID, bcos::crypto::NodeIDPtr _nodeID,
+        bytesConstRef _data, ReceiveMsgFunc _receiveMsgCallback) override;
 
-  bcos::ThreadPool::Ptr threadPool() const { return m_threadPool; }
-  void setThreadPool(bcos::ThreadPool::Ptr _threadPool) {
-    m_threadPool = _threadPool;
-  }
+    /**
+     * @brief: receive broadcast message from gateway
+     * @param _groupID: groupID
+     * @param _nodeID: the node send the message
+     * @param _data: received message data
+     * @param _receiveMsgCallback: response callback
+     * @return void
+     */
+    virtual void onReceiveBroadcastMessage(const std::string& _groupID,
+        bcos::crypto::NodeIDPtr _nodeID, bytesConstRef _data,
+        ReceiveMsgFunc _receiveMsgCallback) override;
 
-  // register message _dispatcher for module
-  void registerModuleMessageDispatcher(
-      int moduleID,
-      std::function<void(bcos::crypto::NodeIDPtr _nodeID,
-                         const std::string &_id, bytesConstRef _data)>
-          _dispatcher) {
-    m_moduleID2MessageDispatcher[moduleID] = _dispatcher;
-  }
+    /**
+     * @brief: send message
+     * @param _moduleID: moduleID
+     * @param _nodeID: the node the message sent to
+     * @param _uuid: uuid identify this message
+     * @param _data: send data payload
+     * @return void
+     */
+    void sendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID, const std::string& _uuid,
+        bytesConstRef _data, bool resp = false);
+
+    /**
+     * @brief: handle message timeout
+     * @param _error: boost error code
+     * @param _uuid: message uuid
+     * @return void
+     */
+    void onMessageTimeout(const boost::system::error_code& _error, bcos::crypto::NodeIDPtr _nodeID,
+        const std::string& _uuid);
 
 public:
-  struct Callback : public std::enable_shared_from_this<Callback> {
-    using Ptr = std::shared_ptr<Callback>;
-    uint64_t startTime = utcSteadyTime();
-    CallbackFunc callbackFunc;
-    std::shared_ptr<boost::asio::deadline_timer> timeoutHandler;
-  };
-  // lock m_callback
-  mutable bcos::RecursiveMutex x_callback;
-  // uuid to callback
-  std::unordered_map<std::string, Callback::Ptr> m_callback;
+    FrontMessageFactory::Ptr messageFactory() const { return m_messageFactory; }
 
-  const std::unordered_map<std::string, Callback::Ptr> &callback() const {
-    return m_callback;
-  }
-
-  const std::unordered_map<
-      int, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
-                              const std::string &_id, bytesConstRef _data)>>
-  moduleID2MessageDispatcher() const {
-    return m_moduleID2MessageDispatcher;
-  }
-
-  Callback::Ptr getAndRemoveCallback(const std::string &_uuid) {
-    Callback::Ptr callback = nullptr;
-
+    void setMessageFactory(FrontMessageFactory::Ptr _messageFactory)
     {
-      RecursiveGuard l(x_callback);
-      auto it = m_callback.find(_uuid);
-      if (it != m_callback.end()) {
-        callback = it->second;
-        m_callback.erase(it);
-      }
+        m_messageFactory = _messageFactory;
     }
 
-    return callback;
-  }
+    bcos::crypto::NodeIDPtr nodeID() const { return m_nodeID; }
+    void setNodeID(bcos::crypto::NodeIDPtr _nodeID) { m_nodeID = _nodeID; }
+    std::string groupID() const { return m_groupID; }
+    void setGroupID(const std::string& _groupID) { m_groupID = _groupID; }
 
-  void addCallback(const std::string &_uuid, Callback::Ptr _callback) {
-    RecursiveGuard l(x_callback);
-    m_callback[_uuid] = _callback;
-  }
+    std::shared_ptr<gateway::GatewayInterface> gatewayInterface() { return m_gatewayInterface; }
+
+    void setGatewayInterface(std::shared_ptr<gateway::GatewayInterface> _gatewayInterface)
+    {
+        m_gatewayInterface = _gatewayInterface;
+    }
+
+    std::shared_ptr<boost::asio::io_service> ioService() const { return m_ioService; }
+    void setIoService(std::shared_ptr<boost::asio::io_service> _ioService)
+    {
+        m_ioService = _ioService;
+    }
+
+    bcos::ThreadPool::Ptr threadPool() const { return m_threadPool; }
+    void setThreadPool(bcos::ThreadPool::Ptr _threadPool) { m_threadPool = _threadPool; }
+
+    // register message _dispatcher for module
+    void registerModuleMessageDispatcher(int moduleID,
+        std::function<void(
+            bcos::crypto::NodeIDPtr _nodeID, const std::string& _id, bytesConstRef _data)>
+            _dispatcher)
+    {
+        m_moduleID2MessageDispatcher[moduleID] = _dispatcher;
+    }
+
+public:
+    struct Callback : public std::enable_shared_from_this<Callback>
+    {
+        using Ptr = std::shared_ptr<Callback>;
+        uint64_t startTime = utcSteadyTime();
+        CallbackFunc callbackFunc;
+        std::shared_ptr<boost::asio::deadline_timer> timeoutHandler;
+    };
+    // lock m_callback
+    mutable bcos::RecursiveMutex x_callback;
+    // uuid to callback
+    std::unordered_map<std::string, Callback::Ptr> m_callback;
+
+    const std::unordered_map<std::string, Callback::Ptr>& callback() const { return m_callback; }
+
+    const std::unordered_map<int, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
+                                      const std::string& _id, bytesConstRef _data)>>
+    moduleID2MessageDispatcher() const
+    {
+        return m_moduleID2MessageDispatcher;
+    }
+
+    Callback::Ptr getAndRemoveCallback(const std::string& _uuid)
+    {
+        Callback::Ptr callback = nullptr;
+
+        {
+            RecursiveGuard l(x_callback);
+            auto it = m_callback.find(_uuid);
+            if (it != m_callback.end())
+            {
+                callback = it->second;
+                m_callback.erase(it);
+            }
+        }
+
+        return callback;
+    }
+
+    void addCallback(const std::string& _uuid, Callback::Ptr _callback)
+    {
+        RecursiveGuard l(x_callback);
+        m_callback[_uuid] = _callback;
+    }
 
 private:
-  // thread pool
-  bcos::ThreadPool::Ptr m_threadPool;
-  // timer
-  std::shared_ptr<boost::asio::io_service> m_ioService;
-  /// gateway interface
-  std::shared_ptr<bcos::gateway::GatewayInterface> m_gatewayInterface;
+    // thread pool
+    bcos::ThreadPool::Ptr m_threadPool;
+    // timer
+    std::shared_ptr<boost::asio::io_service> m_ioService;
+    /// gateway interface
+    std::shared_ptr<bcos::gateway::GatewayInterface> m_gatewayInterface;
 
-  FrontMessageFactory::Ptr m_messageFactory;
+    FrontMessageFactory::Ptr m_messageFactory;
 
-  std::unordered_map<
-      int, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
-                              const std::string &_id, bytesConstRef _data)>>
-      m_moduleID2MessageDispatcher;
+    std::unordered_map<int, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
+                                const std::string& _id, bytesConstRef _data)>>
+        m_moduleID2MessageDispatcher;
 
-  // service is running or not
-  bool m_run = false;
-  //
-  std::shared_ptr<std::thread> m_frontServiceThread;
-  // NodeID
-  bcos::crypto::NodeIDPtr m_nodeID;
-  // GroupID
-  std::string m_groupID;
-  // lock m_callback
-  mutable bcos::Mutex x_nodeIDs;
-  // nodeIDs pushed by the gateway
-  std::shared_ptr<const bcos::crypto::NodeIDs> m_nodeIDs;
+    // service is running or not
+    bool m_run = false;
+    //
+    std::shared_ptr<std::thread> m_frontServiceThread;
+    // NodeID
+    bcos::crypto::NodeIDPtr m_nodeID;
+    // GroupID
+    std::string m_groupID;
+    // lock m_callback
+    mutable bcos::Mutex x_nodeIDs;
+    // nodeIDs pushed by the gateway
+    std::shared_ptr<const bcos::crypto::NodeIDs> m_nodeIDs;
 };
-} // namespace front
-} // namespace bcos
+}  // namespace front
+}  // namespace bcos
