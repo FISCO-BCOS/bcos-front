@@ -22,13 +22,15 @@
 
 #include <bcos-framework/libutilities/Common.h>
 
-namespace bcos {
-namespace front {
-
-enum MessageDecodeStatus {
-  MESSAGE_ERROR = -1,
-  MESSAGE_COMPLETE = 0,
-  MESSAGE_INCOMPLETE = 1
+namespace bcos
+{
+namespace front
+{
+enum MessageDecodeStatus
+{
+    MESSAGE_ERROR = -1,
+    MESSAGE_COMPLETE = 0,
+    MESSAGE_INCOMPLETE = 1
 };
 
 /// moduleID          :2 bytes
@@ -36,65 +38,70 @@ enum MessageDecodeStatus {
 /// UUID              :UUID length bytes
 /// ext               :2 bytes
 /// payload
-class FrontMessage {
+class FrontMessage
+{
 public:
-  using Ptr = std::shared_ptr<FrontMessage>;
+    using Ptr = std::shared_ptr<FrontMessage>;
 
-  /// moduleID(2) + UUID length(1) + ext(2)
-  const static size_t HEADER_MIN_LENGTH = 5;
-  /// The maximum front uuid length  10M
-  const static size_t MAX_MESSAGE_UUID_SIZE = 255;
+    /// moduleID(2) + UUID length(1) + ext(2)
+    const static size_t HEADER_MIN_LENGTH = 5;
+    /// The maximum front uuid length  10M
+    const static size_t MAX_MESSAGE_UUID_SIZE = 255;
 
-  enum ExtFlag {
-    Response = 0x0001,
-  };
-
-public:
-  FrontMessage() {
-    m_uuid = std::make_shared<bytes>();
-    m_payload = bytesConstRef();
-  }
-
-  virtual ~FrontMessage() {}
+    enum ExtFlag
+    {
+        Response = 0x0001,
+    };
 
 public:
-  virtual uint16_t moduleID() { return m_moduleID; }
-  virtual void setModuleID(uint16_t _moduleID) { m_moduleID = _moduleID; }
+    FrontMessage()
+    {
+        m_uuid = std::make_shared<bytes>();
+        m_payload = bytesConstRef();
+    }
 
-  virtual uint16_t ext() { return m_ext; }
-  virtual void setExt(uint16_t _ext) { m_ext = _ext; }
-
-  virtual std::shared_ptr<bytes> uuid() { return m_uuid; }
-  virtual void setUuid(std::shared_ptr<bytes> _uuid) { m_uuid = _uuid; }
-
-  virtual bytesConstRef payload() { return m_payload; }
-  virtual void setPayload(bytesConstRef _payload) { m_payload = _payload; }
-
-  virtual void setResponse() { m_ext |= ExtFlag::Response; }
-  virtual bool isResponse() { return m_ext & ExtFlag::Response; }
+    virtual ~FrontMessage() {}
 
 public:
-  virtual bool encode(bytes &_buffer);
-  virtual ssize_t decode(bytesConstRef _buffer);
+    virtual uint16_t moduleID() { return m_moduleID; }
+    virtual void setModuleID(uint16_t _moduleID) { m_moduleID = _moduleID; }
+
+    virtual uint16_t ext() { return m_ext; }
+    virtual void setExt(uint16_t _ext) { m_ext = _ext; }
+
+    virtual std::shared_ptr<bytes> uuid() { return m_uuid; }
+    virtual void setUuid(std::shared_ptr<bytes> _uuid) { m_uuid = _uuid; }
+
+    virtual bytesConstRef payload() { return m_payload; }
+    virtual void setPayload(bytesConstRef _payload) { m_payload = _payload; }
+
+    virtual void setResponse() { m_ext |= ExtFlag::Response; }
+    virtual bool isResponse() { return m_ext & ExtFlag::Response; }
+
+public:
+    virtual bool encode(bytes& _buffer);
+    virtual ssize_t decode(bytesConstRef _buffer);
 
 protected:
-  uint16_t m_moduleID = 0;
-  std::shared_ptr<bytes> m_uuid;
-  uint16_t m_ext = 0;
-  bytesConstRef m_payload; ///< message data
+    uint16_t m_moduleID = 0;
+    std::shared_ptr<bytes> m_uuid;
+    uint16_t m_ext = 0;
+    bytesConstRef m_payload;  ///< message data
 };
 
-class FrontMessageFactory {
+class FrontMessageFactory
+{
 public:
-  using Ptr = std::shared_ptr<FrontMessageFactory>;
+    using Ptr = std::shared_ptr<FrontMessageFactory>;
 
-  virtual ~FrontMessageFactory() {}
+    virtual ~FrontMessageFactory() {}
 
-  virtual FrontMessage::Ptr buildMessage() {
-    auto message = std::make_shared<FrontMessage>();
-    return message;
-  }
+    virtual FrontMessage::Ptr buildMessage()
+    {
+        auto message = std::make_shared<FrontMessage>();
+        return message;
+    }
 };
 
-} // namespace front
-} // namespace bcos
+}  // namespace front
+}  // namespace bcos
