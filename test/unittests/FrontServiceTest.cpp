@@ -108,6 +108,41 @@ BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeID_withoutCallback)
     f.get();
 }
 
+BOOST_AUTO_TEST_CASE(testFrontService_onRecieveNodeIDsAnd)
+{
+    auto frontService = buildFrontService();
+    int moduleID = 1000;
+    std::promise<bool> p;
+    auto f = p.get_future();
+    auto dstNodeID = createKey(g_dstNodeID_0);
+    std::shared_ptr<crypto::NodeIDs> nodeIDs = std::make_shared<crypto::NodeIDs>();
+    nodeIDs->push_back(dstNodeID);
+    nodeIDs->push_back(dstNodeID);
+
+    std::shared_ptr<const crypto::NodeIDs> nodeIDs0;
+    frontService->registerModuleNodeIDsDispatcher(
+        moduleID, [&p, &nodeIDs0](std::shared_ptr<const crypto::NodeIDs> _nodeIDs,
+                      ReceiveMsgFunc _receiveMsgCallback) {
+            nodeIDs0 = _nodeIDs;
+            p.set_value(true);
+            if (_receiveMsgCallback)
+            {
+                _receiveMsgCallback(nullptr);
+            }
+        });
+
+    BOOST_CHECK(frontService->moduleID2NodeIDsDispatcher().find(moduleID) !=
+                frontService->moduleID2NodeIDsDispatcher().end());
+    BOOST_CHECK(frontService->moduleID2NodeIDsDispatcher().find(moduleID + 1) ==
+                frontService->moduleID2NodeIDsDispatcher().end());
+
+    frontService->onReceiveNodeIDs(
+        "1", nodeIDs, [](Error::Ptr _error) { BOOST_CHECK(_error == nullptr); });
+
+    f.get();
+    BOOST_CHECK(nodeIDs0->size() == nodeIDs->size());
+}
+
 BOOST_AUTO_TEST_CASE(testFrontService_asyncSendMessageByNodeID_callback)
 {
     auto frontService = buildFrontService();

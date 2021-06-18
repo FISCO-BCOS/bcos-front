@@ -187,12 +187,21 @@ public:
     void setThreadPool(bcos::ThreadPool::Ptr _threadPool) { m_threadPool = _threadPool; }
 
     // register message _dispatcher for module
-    void registerModuleMessageDispatcher(int moduleID,
+    void registerModuleMessageDispatcher(int _moduleID,
         std::function<void(
             bcos::crypto::NodeIDPtr _nodeID, const std::string& _id, bytesConstRef _data)>
             _dispatcher)
     {
-        m_moduleID2MessageDispatcher[moduleID] = _dispatcher;
+        m_moduleID2MessageDispatcher[_moduleID] = _dispatcher;
+    }
+
+    // register nodeIDs _dispatcher for module
+    void registerModuleNodeIDsDispatcher(int _moduleID,
+        std::function<void(
+            std::shared_ptr<const crypto::NodeIDs> _nodeIDs, ReceiveMsgFunc _receiveMsgCallback)>
+            _dispatcher)
+    {
+        m_moduleID2NodeIDsDispatcher[_moduleID] = _dispatcher;
     }
 
 public:
@@ -215,6 +224,13 @@ public:
     moduleID2MessageDispatcher() const
     {
         return m_moduleID2MessageDispatcher;
+    }
+
+    std::unordered_map<int, std::function<void(std::shared_ptr<const crypto::NodeIDs> _nodeIDs,
+                                ReceiveMsgFunc _receiveMsgCallback)>>
+    moduleID2NodeIDsDispatcher() const
+    {
+        return m_moduleID2NodeIDsDispatcher;
     }
 
     Callback::Ptr getAndRemoveCallback(const std::string& _uuid)
@@ -253,6 +269,10 @@ private:
     std::unordered_map<int, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
                                 const std::string& _id, bytesConstRef _data)>>
         m_moduleID2MessageDispatcher;
+
+    std::unordered_map<int, std::function<void(std::shared_ptr<const crypto::NodeIDs> _nodeIDs,
+                                ReceiveMsgFunc _receiveMsgCallback)>>
+        m_moduleID2NodeIDsDispatcher;
 
     // service is running or not
     bool m_run = false;

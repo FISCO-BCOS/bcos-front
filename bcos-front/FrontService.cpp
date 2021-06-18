@@ -347,7 +347,19 @@ void FrontService::onReceiveNodeIDs(const std::string& _groupID,
     }
 
     FRONT_LOG(INFO) << LOG_DESC("onReceiveNodeIDs") << LOG_KV("groupID", _groupID)
-                    << LOG_KV("nodeIDs.size()", _nodeIDs->size());
+                    << LOG_KV("nodeIDs.size()", (_nodeIDs ? _nodeIDs->size() : 0));
+
+    for (const auto& entry : m_moduleID2NodeIDsDispatcher)
+    {
+        auto moduleID = entry.first;
+        entry.second(_nodeIDs, [_groupID, moduleID](Error::Ptr _error) {
+            if (_error)
+            {
+                FRONT_LOG(ERROR) << LOG_DESC("onReceiveNodeIDs dispather failed")
+                                 << LOG_KV("groupID", _groupID) << LOG_KV("moduleID", moduleID);
+            }
+        });
+    }
 
     if (_receiveMsgCallback)
     {
