@@ -141,10 +141,12 @@ public:
      * @param _nodeID: the node the message sent to
      * @param _uuid: uuid identify this message
      * @param _data: send data payload
+     * @param isResponse: if send response message
+     * @param _receiveMsgCallback: response callback
      * @return void
      */
     void sendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID, const std::string& _uuid,
-        bytesConstRef _data, bool resp = false);
+        bytesConstRef _data, bool isResponse, ReceiveMsgFunc _receiveMsgCallback);
 
     /**
      * @brief: handle message timeout
@@ -185,12 +187,21 @@ public:
     void setThreadPool(bcos::ThreadPool::Ptr _threadPool) { m_threadPool = _threadPool; }
 
     // register message _dispatcher for module
-    void registerModuleMessageDispatcher(int moduleID,
+    void registerModuleMessageDispatcher(int _moduleID,
         std::function<void(
             bcos::crypto::NodeIDPtr _nodeID, const std::string& _id, bytesConstRef _data)>
             _dispatcher)
     {
-        m_moduleID2MessageDispatcher[moduleID] = _dispatcher;
+        m_moduleID2MessageDispatcher[_moduleID] = _dispatcher;
+    }
+
+    // register nodeIDs _dispatcher for module
+    void registerModuleNodeIDsDispatcher(int _moduleID,
+        std::function<void(
+            std::shared_ptr<const crypto::NodeIDs> _nodeIDs, ReceiveMsgFunc _receiveMsgCallback)>
+            _dispatcher)
+    {
+        m_moduleID2NodeIDsDispatcher[_moduleID] = _dispatcher;
     }
 
 public:
@@ -213,6 +224,13 @@ public:
     moduleID2MessageDispatcher() const
     {
         return m_moduleID2MessageDispatcher;
+    }
+
+    std::unordered_map<int, std::function<void(std::shared_ptr<const crypto::NodeIDs> _nodeIDs,
+                                ReceiveMsgFunc _receiveMsgCallback)>>
+    moduleID2NodeIDsDispatcher() const
+    {
+        return m_moduleID2NodeIDsDispatcher;
     }
 
     Callback::Ptr getAndRemoveCallback(const std::string& _uuid)
@@ -251,6 +269,10 @@ private:
     std::unordered_map<int, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
                                 const std::string& _id, bytesConstRef _data)>>
         m_moduleID2MessageDispatcher;
+
+    std::unordered_map<int, std::function<void(std::shared_ptr<const crypto::NodeIDs> _nodeIDs,
+                                ReceiveMsgFunc _receiveMsgCallback)>>
+        m_moduleID2NodeIDsDispatcher;
 
     // service is running or not
     bool m_run = false;

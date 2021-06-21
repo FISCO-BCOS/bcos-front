@@ -268,7 +268,14 @@ void FrontService::asyncSendMessageByNodeID(int _moduleID, bcos::crypto::NodeIDP
 
         }  // if (_callback)
 
-        sendMessage(_moduleID, _nodeID, uuid, _data);
+        sendMessage(_moduleID, _nodeID, uuid, _data, false, [uuid](Error::Ptr _error) {
+            if (_error && (_error->errorCode() != CommonError::SUCCESS))
+            {
+                FRONT_LOG(ERROR) << LOG_BADGE("sendMessage callback") << LOG_KV("uuid", uuid)
+                                 << LOG_KV("errorCode", _error->errorCode())
+                                 << LOG_KV("errorMessage", _error->errorMessage());
+            }
+        });
     }
     catch (std::exception& e)
     {
@@ -286,11 +293,7 @@ void FrontService::asyncSendMessageByNodeID(int _moduleID, bcos::crypto::NodeIDP
 void FrontService::asyncSendResponse(const std::string& _id, int _moduleID,
     bcos::crypto::NodeIDPtr _nodeID, bytesConstRef _data, ReceiveMsgFunc _receiveMsgCallback)
 {
-    sendMessage(_moduleID, _nodeID, _id, _data, true);
-    if (_receiveMsgCallback)
-    {
-        _receiveMsgCallback(nullptr);
-    }
+    sendMessage(_moduleID, _nodeID, _id, _data, true, _receiveMsgCallback);
 }
 
 /**
@@ -344,7 +347,19 @@ void FrontService::onReceiveNodeIDs(const std::string& _groupID,
     }
 
     FRONT_LOG(INFO) << LOG_DESC("onReceiveNodeIDs") << LOG_KV("groupID", _groupID)
-                    << LOG_KV("nodeIDs.size()", _nodeIDs->size());
+                    << LOG_KV("nodeIDs.size()", (_nodeIDs ? _nodeIDs->size() : 0));
+
+    for (const auto& entry : m_moduleID2NodeIDsDispatcher)
+    {
+        auto moduleID = entry.first;
+        entry.second(_nodeIDs, [_groupID, moduleID](Error::Ptr _error) {
+            if (_error)
+            {
+                FRONT_LOG(ERROR) << LOG_DESC("onReceiveNodeIDs dispather failed")
+                                 << LOG_KV("groupID", _groupID) << LOG_KV("moduleID", moduleID);
+            }
+        });
+    }
 
     if (_receiveMsgCallback)
     {
@@ -395,7 +410,16 @@ void FrontService::onReceiveMessage(const std::string& _groupID, bcos::crypto::N
             auto frontService = frontServiceWeakPtr.lock();
             if (frontService)
             {
-                frontService->sendMessage(moduleID, _nodeID, uuid, _data, true);
+                frontService->sendMessage(
+                    moduleID, _nodeID, uuid, _data, true, [uuid](Error::Ptr _error) {
+                        if (_error && (_error->errorCode() != CommonError::SUCCESS))
+                        {
+                            FRONT_LOG(ERROR)
+                                << LOG_BADGE("onReceiveMessage sendMessage callback")
+                                << LOG_KV("uuid", uuid) << LOG_KV("errorCode", _error->errorCode())
+                                << LOG_KV("errorMessage", _error->errorMessage());
+                        }
+                    });
             }
         };
         if (message->isResponse())
@@ -498,16 +522,19 @@ void FrontService::onReceiveBroadcastMessage(const std::string& _groupID,
  * @param _nodeID: the node the message sent to
  * @param _uuid: uuid identify this message
  * @param _data: send data payload
+ * @param isResponse: if send response message
+ * @param _receiveMsgCallback: response callback
  * @return void
  */
 void FrontService::sendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
-    const std::string& _uuid, bytesConstRef _data, bool resp)
+    const std::string& _uuid, bytesConstRef _data, bool isResponse,
+    ReceiveMsgFunc _receiveMsgCallback)
 {
     auto message = messageFactory()->buildMessage();
     message->setModuleID(_moduleID);
     message->setUuid(std::make_shared<bytes>(_uuid.begin(), _uuid.end()));
     message->setPayload(_data);
-    if (resp)
+    if (isResponse)
     {
         message->setResponse();
     }
@@ -517,13 +544,11 @@ void FrontService::sendMessage(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
 
     // call gateway interface to send the message
     m_gatewayInterface->asyncSendMessageByNodeID(m_groupID, m_nodeID, _nodeID,
-        bytesConstRef(buffer->data(), buffer->size()),
-        [_moduleID, _nodeID, _uuid](Error::Ptr _error) {
-            if (_error && (_error->errorCode() != CommonError::SUCCESS))
-                FRONT_LOG(WARNING)
-                    << LOG_DESC("sendMessage response errorCode")
-                    << LOG_KV("errorCode", _error->errorCode()) << LOG_KV("moduleID", _moduleID)
-                    << LOG_KV("nodeID", _nodeID->hex()) << LOG_KV("uuid", _uuid);
+        bytesConstRef(buffer->data(), buffer->size()), [_receiveMsgCallback](Error::Ptr _error) {
+            if (_receiveMsgCallback)
+            {
+                _receiveMsgCallback(_error);
+            }
         });
 }
 
