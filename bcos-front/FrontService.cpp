@@ -141,9 +141,9 @@ void FrontService::stop()
 
     try
     {
-        if (m_ioService && m_ioService->stopped())
+        if (m_ioService)
         {
-            m_ioService->reset();
+            m_ioService->stop();
         }
 
         if (m_threadPool)
