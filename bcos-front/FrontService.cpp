@@ -563,7 +563,7 @@ void FrontService::onMessageTimeout(const boost::system::error_code& _error,
 {
     if (_error)
     {
-        FRONT_LOG(ERROR) << LOG_DESC("onMessageTimeout") << LOG_KV("error", _error)
+        FRONT_LOG(TRACE) << LOG_DESC("onMessageTimeout") << LOG_KV("error", _error)
                          << LOG_KV("uuid", _uuid);
         return;
     }
@@ -588,7 +588,7 @@ void FrontService::onMessageTimeout(const boost::system::error_code& _error,
             }
         }
 
-        FRONT_LOG(DEBUG) << LOG_BADGE("onMessageTimeout") << LOG_KV("uuid", _uuid);
+        FRONT_LOG(WARNING) << LOG_BADGE("onMessageTimeout") << LOG_KV("uuid", _uuid);
     }
     catch (std::exception& e)
     {
