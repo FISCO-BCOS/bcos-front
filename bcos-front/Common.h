@@ -19,4 +19,4 @@
  */
 #pragma once
 
-#define FRONT_LOG(LEVEL) LOG(LEVEL) << "[FrontService]"
+#define FRONT_LOG(LEVEL) BCOS_LOG(LEVEL) << "[FrontService]"
