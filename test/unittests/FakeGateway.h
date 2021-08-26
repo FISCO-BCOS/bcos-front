@@ -52,7 +52,7 @@ public:
      */
     virtual void start() override {}
     virtual void stop() override {}
-
+    void asyncGetPeers(bcos::gateway::PeerRespFunc) override {}
     /**
      * @brief: send message to a single node
      * @param _groupID: groupID
