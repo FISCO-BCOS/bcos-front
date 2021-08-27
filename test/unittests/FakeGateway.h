@@ -26,6 +26,7 @@
 #include <bcos-framework/libutilities/Common.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
 #include <boost/asio.hpp>
+#include <boost/core/ignore_unused.hpp>
 
 namespace bcos
 {
@@ -53,6 +54,18 @@ public:
     virtual void start() override {}
     virtual void stop() override {}
     void asyncGetPeers(bcos::gateway::PeerRespFunc) override {}
+    /**
+     * @brief: get nodeIDs from gateway
+     * @param _groupID:
+     * @param _getNodeIDsFunc: get nodeIDs callback
+     * @return void
+     */
+    virtual void asyncGetNodeIDs(
+        const std::string& _groupID, GetNodeIDsFunc _getNodeIDsFunc) override
+    {
+        boost::ignore_unused(_groupID, _getNodeIDsFunc);
+    }
+
     /**
      * @brief: send message to a single node
      * @param _groupID: groupID

@@ -112,7 +112,7 @@ void FrontService::start()
             auto frontService = self.lock();
             if (frontService)
             {
-                frontService->onReceiveNodeIDs("", _nodeIDs, nullptr);
+                frontService->onReceiveNodeIDs(frontService->groupID(), _nodeIDs, nullptr);
             }
         });
 
