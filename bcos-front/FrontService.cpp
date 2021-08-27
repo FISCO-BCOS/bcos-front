@@ -108,7 +108,8 @@ void FrontService::start()
                                  << LOG_KV("errorMessage", _error->errorMessage());
                 return;
             }
-
+            FRONT_LOG(INFO) << LOG_BADGE("start") << LOG_DESC("asyncGetNodeIDs callback")
+                            << LOG_KV("node size", _nodeIDs ? _nodeIDs->size() : -1);
             auto frontService = self.lock();
             if (frontService)
             {
