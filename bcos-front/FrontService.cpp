@@ -17,6 +17,7 @@
  * @author: octopus
  * @date 2021-04-19
  */
+
 #include <thread>
 
 #include <bcos-front/Common.h>
@@ -95,6 +96,25 @@ void FrontService::start()
     checkParams();
 
     m_run = true;
+
+    // try to getNodeIDs from gateway
+    auto self = std::weak_ptr<FrontService>(shared_from_this());
+    m_gatewayInterface->asyncGetNodeIDs(
+        m_groupID, [self](Error::Ptr _error, std::shared_ptr<const crypto::NodeIDs> _nodeIDs) {
+            if (_error)
+            {
+                FRONT_LOG(ERROR) << LOG_BADGE("start") << LOG_DESC("asyncGetNodeIDs error")
+                                 << LOG_KV("errorCode", _error->errorCode())
+                                 << LOG_KV("errorMessage", _error->errorMessage());
+                return;
+            }
+
+            auto frontService = self.lock();
+            if (frontService)
+            {
+                frontService->onReceiveNodeIDs(frontService->groupID(), _nodeIDs, nullptr);
+            }
+        });
 
     m_frontServiceThread = std::make_shared<std::thread>([=]() {
         while (m_run)
