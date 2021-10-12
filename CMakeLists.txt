@@ -36,8 +36,8 @@ list(APPEND CMAKE_MODULE_PATH ${BCOS_FRONT_CMAKE_DIR})
 #init hunter
 include(HunterGate)
 HunterGate(
-    URL "https://${URL_BASE}/FISCO-BCOS/hunter/archive/67ea989d75ca1560d6f3139dacda8da1dad0f978.tar.gz"
-    SHA1 "50919176ffd124cdc9a75f258e104a600b8d0368"
+    URL "https://${URL_BASE}/FISCO-BCOS/hunter/archive/32b5a266ff0e808b2ed57afa3d351f7bb899c9f6.tar.gz"
+    SHA1 "4fbc308a612c3ca3be7e03a54c4c4d27ba7804ed"
     FILEPATH "${CMAKE_SOURCE_DIR}/cmake/config.cmake"
 )
 project(bcos-front VERSION "3.0.0")
