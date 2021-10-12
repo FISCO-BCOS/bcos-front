@@ -99,6 +99,10 @@ public:
      */
     virtual void asyncSendBroadcastMessage(const std::string& _groupID,
         bcos::crypto::NodeIDPtr _srcNodeID, bytesConstRef _payload) override;
+
+    void asyncNotifyGroupInfo(
+        bcos::group::GroupInfo::Ptr, std::function<void(Error::Ptr&&)>) override
+    {}
 };
 
 }  // namespace test
