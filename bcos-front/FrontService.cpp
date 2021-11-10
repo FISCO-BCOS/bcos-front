@@ -286,14 +286,16 @@ void FrontService::asyncSendMessageByNodeID(int _moduleID, bcos::crypto::NodeIDP
 
         }  // if (_callback)
 
-        sendMessage(_moduleID, _nodeID, uuid, _data, false, [uuid](Error::Ptr _error) {
-            if (_error && (_error->errorCode() != CommonError::SUCCESS))
-            {
-                FRONT_LOG(ERROR) << LOG_BADGE("sendMessage callback") << LOG_KV("uuid", uuid)
-                                 << LOG_KV("errorCode", _error->errorCode())
-                                 << LOG_KV("errorMessage", _error->errorMessage());
-            }
-        });
+        sendMessage(_moduleID, _nodeID, uuid, _data, false,
+            [this, _moduleID, _nodeID, uuid](Error::Ptr _error) {
+                if (_error && (_error->errorCode() != CommonError::SUCCESS))
+                {
+                    FRONT_LOG(ERROR) << LOG_BADGE("sendMessage callback") << LOG_KV("uuid", uuid)
+                                     << LOG_KV("errorCode", _error->errorCode())
+                                     << LOG_KV("errorMessage", _error->errorMessage());
+                    handleCallback(_error, bytesConstRef(), uuid, _moduleID, _nodeID);
+                }
+            });
     }
     catch (std::exception& e)
     {
@@ -392,6 +394,53 @@ void FrontService::onReceiveNodeIDs(const std::string& _groupID,
     }
 }
 
+void FrontService::handleCallback(bcos::Error::Ptr _error, bytesConstRef _payLoad,
+    std::string const& _uuid, int _moduleID, bcos::crypto::NodeIDPtr _nodeID)
+{
+    // callback message
+    auto callback = getAndRemoveCallback(_uuid);
+    if (!callback)
+    {
+        return;
+    }
+    auto frontServiceWeakPtr = std::weak_ptr<FrontService>(shared_from_this());
+    auto respFunc = [frontServiceWeakPtr, _moduleID, _nodeID, _uuid](bytesConstRef _data) {
+        auto frontService = frontServiceWeakPtr.lock();
+        if (frontService)
+        {
+            frontService->sendMessage(
+                _moduleID, _nodeID, _uuid, _data, true, [_uuid](Error::Ptr _error) {
+                    if (_error && (_error->errorCode() != CommonError::SUCCESS))
+                    {
+                        FRONT_LOG(ERROR)
+                            << LOG_BADGE("onReceiveMessage sendMessage callback")
+                            << LOG_KV("uuid", _uuid) << LOG_KV("errorCode", _error->errorCode())
+                            << LOG_KV("errorMessage", _error->errorMessage());
+                    }
+                });
+        }
+    };
+    // cancel the timer first
+    if (callback->timeoutHandler)
+    {
+        callback->timeoutHandler->cancel();
+    }
+
+    if (m_threadPool)
+    {
+        // construct shared_ptr<bytes> from message->payload() first for
+        // thead safe
+        std::shared_ptr<bytes> buffer = std::make_shared<bytes>(_payLoad.begin(), _payLoad.end());
+        m_threadPool->enqueue([_uuid, _error, callback, buffer, _nodeID, respFunc] {
+            callback->callbackFunc(
+                _error, _nodeID, bytesConstRef(buffer->data(), buffer->size()), _uuid, respFunc);
+        });
+    }
+    else
+    {
+        callback->callbackFunc(_error, _nodeID, _payLoad, _uuid, respFunc);
+    }
+}
 /**
  * @brief: receive message from gateway
  * @param _groupID: groupID
@@ -423,56 +472,9 @@ void FrontService::onReceiveMessage(const std::string& _groupID, bcos::crypto::N
                          << LOG_KV("groupID", _groupID) << LOG_KV("nodeID", _nodeID->hex())
                          << LOG_KV("length", _data.size());
 
-        auto frontServiceWeakPtr = std::weak_ptr<FrontService>(shared_from_this());
-        auto _respFunc = [frontServiceWeakPtr, moduleID, _nodeID, uuid](bytesConstRef _data) {
-            auto frontService = frontServiceWeakPtr.lock();
-            if (frontService)
-            {
-                frontService->sendMessage(
-                    moduleID, _nodeID, uuid, _data, true, [uuid](Error::Ptr _error) {
-                        if (_error && (_error->errorCode() != CommonError::SUCCESS))
-                        {
-                            FRONT_LOG(ERROR)
-                                << LOG_BADGE("onReceiveMessage sendMessage callback")
-                                << LOG_KV("uuid", uuid) << LOG_KV("errorCode", _error->errorCode())
-                                << LOG_KV("errorMessage", _error->errorMessage());
-                        }
-                    });
-            }
-        };
         if (message->isResponse())
         {
-            // callback message
-            auto callback = getAndRemoveCallback(uuid);
-            if (callback)
-            {
-                // cancel the timer first
-                if (callback->timeoutHandler)
-                {
-                    callback->timeoutHandler->cancel();
-                }
-
-                if (m_threadPool)
-                {
-                    // construct shared_ptr<bytes> from message->payload() first for
-                    // thead safe
-                    std::shared_ptr<bytes> buffer = std::make_shared<bytes>(
-                        message->payload().begin(), message->payload().end());
-                    m_threadPool->enqueue([uuid, callback, buffer, _nodeID, _respFunc] {
-                        callback->callbackFunc(nullptr, _nodeID,
-                            bytesConstRef(buffer->data(), buffer->size()), uuid, _respFunc);
-                    });
-                }
-                else
-                {
-                    callback->callbackFunc(nullptr, _nodeID, message->payload(), uuid, _respFunc);
-                }
-            }
-            else
-            {
-                FRONT_LOG(DEBUG) << LOG_DESC("unable find the resp callback")
-                                 << LOG_KV("uuid", uuid);
-            }
+            handleCallback(nullptr, message->payload(), uuid, moduleID, _nodeID);
         }
         else
         {

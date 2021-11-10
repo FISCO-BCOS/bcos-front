@@ -256,6 +256,10 @@ public:
         m_callback[_uuid] = _callback;
     }
 
+protected:
+    virtual void handleCallback(bcos::Error::Ptr _error, bytesConstRef _payLoad,
+        std::string const& _uuid, int _moduleID, bcos::crypto::NodeIDPtr _nodeID);
+
 private:
     // thread pool
     bcos::ThreadPool::Ptr m_threadPool;
