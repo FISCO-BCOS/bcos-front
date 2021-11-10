@@ -103,6 +103,18 @@ public:
     void asyncNotifyGroupInfo(
         bcos::group::GroupInfo::Ptr, std::function<void(Error::Ptr&&)>) override
     {}
+
+    void asyncSendMessageByTopic(const std::string&, bcos::bytesConstRef,
+        std::function<void(bcos::Error::Ptr&&, int16_t, bytesPointer)>) override
+    {}
+    void asyncSendBroadbastMessageByTopic(const std::string&, bcos::bytesConstRef) override {}
+
+    void asyncSubscribeTopic(
+        std::string const&, std::string const&, std::function<void(Error::Ptr&&)>) override
+    {}
+    void asyncRemoveTopic(std::string const&, std::vector<std::string> const&,
+        std::function<void(Error::Ptr&&)>) override
+    {}
 };
 
 }  // namespace test
