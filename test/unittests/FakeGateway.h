@@ -53,7 +53,9 @@ public:
      */
     virtual void start() override {}
     virtual void stop() override {}
-    void asyncGetPeers(bcos::gateway::PeerRespFunc) override {}
+    void asyncGetPeers(std::function<void(
+            Error::Ptr, bcos::gateway::GatewayInfo::Ptr, bcos::gateway::GatewayInfosPtr)>) override
+    {}
     /**
      * @brief: get nodeIDs from gateway
      * @param _groupID:
