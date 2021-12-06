@@ -45,8 +45,8 @@ public:
     FrontService& operator=(FrontService&&) = delete;
 
 public:
-    virtual void start() override;
-    virtual void stop() override;
+    void start() override;
+    void stop() override;
 
     // check the startup parameters, if the required parameters are not set
     // properly, exception will be thrown
@@ -58,7 +58,7 @@ public:
      * @param _getNodeIDsFunc: response callback
      * @return void
      */
-    virtual void asyncGetNodeIDs(GetNodeIDsFunc _getNodeIDsFunc) override;
+    void asyncGetNodeIDs(GetNodeIDsFunc _getNodeIDsFunc) override;
     /**
      * @brief: send message
      * @param _moduleID: moduleID
@@ -68,7 +68,7 @@ public:
      * @param _callbackFunc: callback
      * @return void
      */
-    virtual void asyncSendMessageByNodeID(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
+    void asyncSendMessageByNodeID(int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
         bytesConstRef _data, uint32_t _timeout, CallbackFunc _callbackFunc) override;
 
     /**
@@ -79,9 +79,8 @@ public:
      * @param _data: message
      * @return void
      */
-    virtual void asyncSendResponse(const std::string& _id, int _moduleID,
-        bcos::crypto::NodeIDPtr _nodeID, bytesConstRef _data,
-        ReceiveMsgFunc _receiveMsgCallback) override;
+    void asyncSendResponse(const std::string& _id, int _moduleID, bcos::crypto::NodeIDPtr _nodeID,
+        bytesConstRef _data, ReceiveMsgFunc _receiveMsgCallback) override;
 
     /**
      * @brief: send message to multiple nodes
@@ -90,7 +89,7 @@ public:
      * @param _data: send message data
      * @return void
      */
-    virtual void asyncSendMessageByNodeIDs(
+    void asyncSendMessageByNodeIDs(
         int _moduleID, const crypto::NodeIDs& _nodeIDs, bytesConstRef _data) override;
 
     /**
@@ -99,7 +98,7 @@ public:
      * @param _data: send message data
      * @return void
      */
-    virtual void asyncSendBroadcastMessage(int _moduleID, bytesConstRef _data) override;
+    void asyncSendBroadcastMessage(int _moduleID, bytesConstRef _data) override;
 
     /**
      * @brief: receive nodeIDs from gateway
@@ -108,7 +107,7 @@ public:
      * @param _receiveMsgCallback: response callback
      * @return void
      */
-    virtual void onReceiveNodeIDs(const std::string& _groupID,
+    void onReceiveNodeIDs(const std::string& _groupID,
         std::shared_ptr<const crypto::NodeIDs> _nodeIDs,
         ReceiveMsgFunc _receiveMsgCallback) override;
 
@@ -120,7 +119,7 @@ public:
      * @param _receiveMsgCallback: response callback
      * @return void
      */
-    virtual void onReceiveMessage(const std::string& _groupID, bcos::crypto::NodeIDPtr _nodeID,
+    void onReceiveMessage(const std::string& _groupID, bcos::crypto::NodeIDPtr _nodeID,
         bytesConstRef _data, ReceiveMsgFunc _receiveMsgCallback) override;
 
     /**
@@ -131,9 +130,8 @@ public:
      * @param _receiveMsgCallback: response callback
      * @return void
      */
-    virtual void onReceiveBroadcastMessage(const std::string& _groupID,
-        bcos::crypto::NodeIDPtr _nodeID, bytesConstRef _data,
-        ReceiveMsgFunc _receiveMsgCallback) override;
+    void onReceiveBroadcastMessage(const std::string& _groupID, bcos::crypto::NodeIDPtr _nodeID,
+        bytesConstRef _data, ReceiveMsgFunc _receiveMsgCallback) override;
 
     /**
      * @brief: send message

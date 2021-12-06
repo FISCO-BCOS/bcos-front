@@ -51,8 +51,8 @@ public:
     /**
      * @brief: start/stop service
      */
-    virtual void start() override {}
-    virtual void stop() override {}
+    void start() override {}
+    void stop() override {}
     void asyncGetPeers(std::function<void(
             Error::Ptr, bcos::gateway::GatewayInfo::Ptr, bcos::gateway::GatewayInfosPtr)>) override
     {}
@@ -62,8 +62,7 @@ public:
      * @param _getNodeIDsFunc: get nodeIDs callback
      * @return void
      */
-    virtual void asyncGetNodeIDs(
-        const std::string& _groupID, GetNodeIDsFunc _getNodeIDsFunc) override
+    void asyncGetNodeIDs(const std::string& _groupID, GetNodeIDsFunc _getNodeIDsFunc) override
     {
         boost::ignore_unused(_groupID, _getNodeIDsFunc);
     }
@@ -99,8 +98,8 @@ public:
      * @param _payload: message content
      * @return void
      */
-    virtual void asyncSendBroadcastMessage(const std::string& _groupID,
-        bcos::crypto::NodeIDPtr _srcNodeID, bytesConstRef _payload) override;
+    void asyncSendBroadcastMessage(const std::string& _groupID, bcos::crypto::NodeIDPtr _srcNodeID,
+        bytesConstRef _payload) override;
 
     void asyncNotifyGroupInfo(
         bcos::group::GroupInfo::Ptr, std::function<void(Error::Ptr&&)>) override
