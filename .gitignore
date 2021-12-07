@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+build
+test/bcos-test
+cmake
+bcos-cmake-scripts
