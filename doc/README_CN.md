@@ -2,7 +2,7 @@
 
 [English](../README.md) / 中文
 
-# 两阶段并行共识
+# 区块链网络模块
 
 [![codecov](https://codecov.io/gh/FISCO-BCOS/bcos-front/branch/master/graph/badge.svg)](https://codecov.io/gh/FISCO-BCOS/bcos-front)
 [![CodeFactor](https://www.codefactor.io/repository/github/fisco-bcos/bcos-front/badge)](https://www.codefactor.io/repository/github/fisco-bcos/bcos-front)
